@@ -59,7 +59,7 @@ export function NewGuideButton() {
               <label className="z-field">Title<input data-testid="input-guide-title" required maxLength={300} autoFocus value={title} onChange={(e) => setTitle(e.target.value)} /></label>
               <label className="z-field">Goal<textarea data-testid="input-workflow-goal" required rows={3} maxLength={2000} value={goal} onChange={(e) => setGoal(e.target.value)} /><small>What should the finished guide teach?</small></label>
               <label className="z-field">Start URL (optional)<input data-testid="input-start-url" type="url" value={startUrl} onChange={(e) => setStartUrl(e.target.value)} placeholder="https://" /></label>
-              <p className="z-note">Creating a guide saves a workflow and an empty guide. AI generation is not available yet.</p>
+              <p className="z-note">Start with an empty guide. In the editor, write your own steps or generate a draft from text or a public webpage. Preview AI suggestions before saving, then review the saved revision before publishing.</p>
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
                 <button type="button" className="z-btn" data-testid="button-cancel-guide" onClick={() => setOpen(false)}>Cancel</button>
                 <button type="submit" className="z-btn z-btn-primary" disabled={busy} data-testid="button-submit-guide">{busy ? "Creating..." : "Create guide"}</button>

@@ -1,0 +1,16 @@
+.z-draft-processing .z-field { display: grid; gap: 6px; margin: 16px 0; }
+.z-draft-processing .z-field label { font-size: 13px; font-weight: 600; }
+.z-draft-processing .z-field input, .z-draft-processing .z-field select,
+.z-draft-processing .z-field textarea {
+  width: 100%; min-width: 0; padding: 11px 13px;
+  border: 1px solid var(--line); border-radius: 9px;
+  background: var(--card); color: var(--ink);
+  font: inherit; font-size: 14px; box-sizing: border-box;
+}
+.z-draft-processing .z-field textarea { resize: vertical; }
+.z-draft-processing input:focus-visible, .z-draft-processing select:focus-visible,
+.z-draft-processing textarea:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.z-draft-processing details { padding: 12px 0; border-top: 1px solid var(--line); }
+.z-draft-processing summary { cursor: pointer; font-weight: 600; }
+.z-draft-processing { overflow-wrap: anywhere; }
+.z-draft-processing button:disabled { opacity: .55; cursor: not-allowed; }

@@ -149,8 +149,8 @@ test("signed-out workspace has clear account entry without a client crash", asyn
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Create your workspace" })).toBeVisible();
-  await page.getByRole("link", { name: "Create your workspace" }).click();
+  await expect(page.getByRole("link", { name: "Create your workspace", exact: true }).first()).toBeVisible();
+  await page.getByRole("link", { name: "Create your workspace", exact: true }).first().click();
   await expect(page.getByTestId("form-signup")).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -186,7 +186,7 @@ test("API authentication boundaries and original missing endpoints stay explicit
 test("dashboard is readable on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Create your workspace" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Create your workspace", exact: true }).first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await expect(page.getByRole("link", { name: "I already have an account" })).toBeVisible();
 });

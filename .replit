@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "zipy-port-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "zipy-processing-worker"
+
 [[workflows.workflow]]
 name = "zipy-port-tests"
 author = "agent"
@@ -30,6 +34,17 @@ args = "pnpm --filter @workspace/scripts run test:zipy"
 
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow]]
+name = "zipy-processing-worker"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/scripts run worker:zipy"
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [agent]
 stack = "PNPM_WORKSPACE"

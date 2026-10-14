@@ -12,8 +12,9 @@ const GROUPS: { title: string; items: Item[] }[] = [
     { name: "Team invitations", level: "unfinished", note: "No invitation flow exists." },
     { name: "Password reset", level: "unfinished", note: "Not implemented." } ] },
   { title: "Inputs: text, URL, file", items: [
-    { name: "Source ingestion form", level: "setup", note: "Available inside the guide editor; depends on storage configuration." },
-    { name: "Text, URL and file sources", level: "setup", note: "Accepted as sources; processing relies on the worker, which has no registered handlers." } ] },
+    { name: "Text and public webpage drafting", level: "working", note: "Editor → real processing job → preview → new saved revision. Private/local URLs are blocked." },
+    { name: "Image text extraction", level: "setup", note: "The image worker handler is connected; a verified user-facing upload journey is still needed." },
+    { name: "PDF, Office, audio and video", level: "unfinished", note: "Imported processing modules are not yet registered and verified." } ] },
   { title: "Workflows and review", items: [
     { name: "Create workflow (goal, start URL)", level: "working", note: "Metadata record only; used by New guide." },
     { name: "Workflow review", level: "setup", note: "Opens from a guide; needs a synthesized plan.", href: "/dashboard" },
@@ -22,7 +23,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     { name: "Guide records (create, list, filter)", level: "working", note: "Dashboard search, status, folder and tag filters.", href: "/dashboard" },
     { name: "Step editor and version history", level: "working", note: "Add, reorder, edit and save steps. Restore revisions with protection against conflicting changes." },
     { name: "Style panel and annotations", level: "setup", note: "Imported controls need further contract reconciliation and validation." },
-    { name: "AI draft generation", level: "unfinished", note: "Worker has no registered handlers." } ] },
+    { name: "AI draft generation", level: "working", note: "Real titles, introduction, steps, tips, FAQ and glossary from text or public pages. Language, tone and brand-voice options. Preview before applying; saved revisions require human approval. Limited to three AI jobs per workspace per 24 hours; uses Replit AI credits." } ] },
   { title: "Publishing, sharing and exports", items: [
     { name: "Publish and read public guides", level: "working", note: "Publish a saved snapshot and copy a public reader link. Later unpublished edits do not change the shared snapshot." },
     { name: "Make a guide private", level: "working", note: "Revoke public access without deleting the guide or its history." },

@@ -10,7 +10,7 @@ describe the whole product as production-ready.
 - Start `artifacts/zipy-ai: web` and `artifacts/api-server: API Server` using their managed Replit workflows.
 - Do not run a root `pnpm dev`: the services need workflow-provided ports and routing.
 - `pnpm --filter @workspace/scripts run test:zipy` runs the port's browser and API checks.
-- `pnpm --filter @workspace/scripts run worker:zipy` is the preserved worker entrypoint. It requires its original storage/provider configuration and handler registration before processing jobs.
+- `pnpm --filter @workspace/scripts run worker:zipy` runs the processing worker from the API server's working directory so both use the same local storage root. It registers text ingestion, public-page ingestion, image text extraction, and content generation. Other imported handlers are not registered.
 
 ## Structure
 
@@ -37,7 +37,9 @@ describe the whole product as production-ready.
 - Workspace activity, anonymous reader sessions/completions, usage/executive reports and persistent branding now have native UI/API flows. Branding saves use optimistic version checks. Public exports read only the published snapshot, and print/PDF uses the browser print dialog.
 - Folder/tag management and some workflow detail/review endpoints remain absent. Absent endpoints return explicit JSON 404 errors, not fabricated data. The `/features` page distinguishes usable core flows from unfinished integrations.
 - Some inherited API imports reference functions their supplied domain libraries do not export (advanced analytics aggregators, billing readers/catalog, template lookup, redaction helpers, and DOCX/image-pack barrel exports). Native analytics routes supersede the unfinished imported analytics endpoint; step drop-off/search/rating telemetry remains unavailable. Paid billing stays disabled without a provider.
-- The supplied worker bootstrap registers no handlers. The imported ingestion implementation files are preserved, but provider credentials, storage configuration, automation dependencies and handler registration are still needed for full processing.
+- Text/public-page AI drafting has a verified UI → API → job → preview → versioned save → human approval → publication journey. Drafts never overwrite saved content automatically. Any later content revision requires renewed approval; stale versions and other-workspace jobs are rejected. Managed OpenAI uses Replit AI credits, independently of customer billing. Limits are three model jobs per workspace and thirty globally per rolling 24 hours.
+- Four processing handlers are registered. Image extraction has no verified upload UI yet; PDF/Office/audio/video, multi-source fusion, accessibility-tree synthesis, capture, annotations, and advanced quality operations remain unfinished. Customer subscriptions stay disabled until a provider is connected. Development local storage is not a durable production storage configuration; the console worker also needs a production service arrangement before publishing.
+- The homepage lists all 26 workflow groups with explicitly illustrative demos and distinguishes available core features from unfinished advanced functionality.
 - The main shell, welcome, account entry and dashboard are responsive; other retained domain screens need further design work.
 - Shared-library and frontend strict checks pass. The API server still has inherited type/contract errors in unfinished analytics, billing, annotation and redaction modules; bundling and the implemented core's browser/API checks pass.
 

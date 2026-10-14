@@ -20,11 +20,17 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ApplyGuideDraftBody,
+  ApproveGuideRevisionBody,
+  CreateGuideDraftJob202,
+  CreateGuideDraftJobBody,
   DownloadGuideParams,
   DownloadPublishedGuide200Two,
   DownloadPublishedGuideParams,
   GetBrandingTheme200,
+  GetGuideDraftJob200,
   GetGuideVersions200,
+  GetProcessingJob200,
   GetPublishedGuideTheme200,
   GetSession200,
   GetWorkspaceActivity200,
@@ -71,6 +77,434 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getCreateGuideDraftJobUrl = (id: string,) => {
+
+
+
+
+  return `/api/guides/${id}/draft-jobs`
+}
+
+/**
+ * @summary Queue a source-grounded AI draft without modifying the saved guide
+ */
+export const createGuideDraftJob = async (id: string,
+    createGuideDraftJobBody: CreateGuideDraftJobBody, options?: Parameters<typeof customFetch>[1]): Promise<CreateGuideDraftJob202> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CreateGuideDraftJob202>(getCreateGuideDraftJobUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createGuideDraftJobBody)
+  }
+);}
+
+
+
+
+
+export const getCreateGuideDraftJobMutationKey = () => ['createGuideDraftJob'] as const;
+
+export const getCreateGuideDraftJobMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGuideDraftJob>>, TError,CreateGuideDraftJobMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGuideDraftJob>>, TError,CreateGuideDraftJobMutationVariables, TContext> => {
+
+const mutationKey = getCreateGuideDraftJobMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGuideDraftJob>>, CreateGuideDraftJobMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createGuideDraftJob(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGuideDraftJobMutationResult = NonNullable<Awaited<ReturnType<typeof createGuideDraftJob>>>
+    export type CreateGuideDraftJobMutationBody = BodyType<CreateGuideDraftJobBody>
+    export type CreateGuideDraftJobMutationError = ErrorType<void>
+    export type CreateGuideDraftJobMutationVariables = {id: string;data: BodyType<CreateGuideDraftJobBody>}
+
+    /**
+ * @summary Queue a source-grounded AI draft without modifying the saved guide
+ */
+export const useCreateGuideDraftJob = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGuideDraftJob>>, TError,CreateGuideDraftJobMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGuideDraftJob>>,
+        TError,
+        CreateGuideDraftJobMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateGuideDraftJobMutationOptions(options));
+    }
+
+export const getGetGuideDraftJobUrl = (id: string,
+    jobId: string,) => {
+
+
+
+
+  return `/api/guides/${id}/draft-jobs/${jobId}`
+}
+
+/**
+ * @summary Read the job state and completed draft in the active workspace
+ */
+export const getGuideDraftJob = async (id: string,
+    jobId: string, options?: Parameters<typeof customFetch>[1]): Promise<GetGuideDraftJob200> => {
+
+  return customFetch<GetGuideDraftJob200>(getGetGuideDraftJobUrl(id,jobId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGuideDraftJobQueryKey = (id: string,
+    jobId: string,) => {
+    return [
+    `/api/guides/${id}/draft-jobs/${jobId}`
+    ] as const;
+    }
+
+
+export const getGetGuideDraftJobQueryOptions = <TData = Awaited<ReturnType<typeof getGuideDraftJob>>, TError = ErrorType<void>>(id: string,
+    jobId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGuideDraftJob>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGuideDraftJobQueryKey(id,jobId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGuideDraftJob>>> = ({ signal }) => getGuideDraftJob(id,jobId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && jobId !== null && jobId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGuideDraftJob>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGuideDraftJobQueryResult = NonNullable<Awaited<ReturnType<typeof getGuideDraftJob>>>
+export type GetGuideDraftJobQueryError = ErrorType<void>
+
+
+/**
+ * @summary Read the job state and completed draft in the active workspace
+ */
+
+export function useGetGuideDraftJob<TData = Awaited<ReturnType<typeof getGuideDraftJob>>, TError = ErrorType<void>>(
+ id: string,
+    jobId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGuideDraftJob>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGuideDraftJobQueryOptions(id,jobId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getApplyGuideDraftUrl = (id: string,
+    jobId: string,) => {
+
+
+
+
+  return `/api/guides/${id}/draft-jobs/${jobId}/apply`
+}
+
+/**
+ * @summary Save a completed AI draft as a new revision requiring review
+ */
+export const applyGuideDraft = async (id: string,
+    jobId: string,
+    applyGuideDraftBody: ApplyGuideDraftBody, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getApplyGuideDraftUrl(id,jobId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(applyGuideDraftBody)
+  }
+);}
+
+
+
+
+
+export const getApplyGuideDraftMutationKey = () => ['applyGuideDraft'] as const;
+
+export const getApplyGuideDraftMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyGuideDraft>>, TError,ApplyGuideDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyGuideDraft>>, TError,ApplyGuideDraftMutationVariables, TContext> => {
+
+const mutationKey = getApplyGuideDraftMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyGuideDraft>>, ApplyGuideDraftMutationVariables> = (props) => {
+          const {id,jobId,data} = props ?? {};
+
+          return  applyGuideDraft(id,jobId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyGuideDraftMutationResult = NonNullable<Awaited<ReturnType<typeof applyGuideDraft>>>
+    export type ApplyGuideDraftMutationBody = BodyType<ApplyGuideDraftBody>
+    export type ApplyGuideDraftMutationError = ErrorType<void>
+    export type ApplyGuideDraftMutationVariables = {id: string;jobId: string;data: BodyType<ApplyGuideDraftBody>}
+
+    /**
+ * @summary Save a completed AI draft as a new revision requiring review
+ */
+export const useApplyGuideDraft = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyGuideDraft>>, TError,ApplyGuideDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyGuideDraft>>,
+        TError,
+        ApplyGuideDraftMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApplyGuideDraftMutationOptions(options));
+    }
+
+export const getApproveGuideRevisionUrl = (id: string,) => {
+
+
+
+
+  return `/api/guides/${id}/review`
+}
+
+/**
+ * @summary Record an authorized human approval of the current saved revision
+ */
+export const approveGuideRevision = async (id: string,
+    approveGuideRevisionBody: ApproveGuideRevisionBody, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getApproveGuideRevisionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(approveGuideRevisionBody)
+  }
+);}
+
+
+
+
+
+export const getApproveGuideRevisionMutationKey = () => ['approveGuideRevision'] as const;
+
+export const getApproveGuideRevisionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveGuideRevision>>, TError,ApproveGuideRevisionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveGuideRevision>>, TError,ApproveGuideRevisionMutationVariables, TContext> => {
+
+const mutationKey = getApproveGuideRevisionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveGuideRevision>>, ApproveGuideRevisionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  approveGuideRevision(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveGuideRevisionMutationResult = NonNullable<Awaited<ReturnType<typeof approveGuideRevision>>>
+    export type ApproveGuideRevisionMutationBody = BodyType<ApproveGuideRevisionBody>
+    export type ApproveGuideRevisionMutationError = ErrorType<void>
+    export type ApproveGuideRevisionMutationVariables = {id: string;data: BodyType<ApproveGuideRevisionBody>}
+
+    /**
+ * @summary Record an authorized human approval of the current saved revision
+ */
+export const useApproveGuideRevision = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveGuideRevision>>, TError,ApproveGuideRevisionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveGuideRevision>>,
+        TError,
+        ApproveGuideRevisionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApproveGuideRevisionMutationOptions(options));
+    }
+
+export const getGetProcessingJobUrl = (jobId: string,) => {
+
+
+
+
+  return `/api/jobs/${jobId}`
+}
+
+/**
+ * @summary Read a workspace-scoped processing job without exposing its input payload
+ */
+export const getProcessingJob = async (jobId: string, options?: Parameters<typeof customFetch>[1]): Promise<GetProcessingJob200> => {
+
+  return customFetch<GetProcessingJob200>(getGetProcessingJobUrl(jobId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProcessingJobQueryKey = (jobId: string,) => {
+    return [
+    `/api/jobs/${jobId}`
+    ] as const;
+    }
+
+
+export const getGetProcessingJobQueryOptions = <TData = Awaited<ReturnType<typeof getProcessingJob>>, TError = ErrorType<void>>(jobId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProcessingJob>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProcessingJobQueryKey(jobId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProcessingJob>>> = ({ signal }) => getProcessingJob(jobId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: jobId !== null && jobId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProcessingJob>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProcessingJobQueryResult = NonNullable<Awaited<ReturnType<typeof getProcessingJob>>>
+export type GetProcessingJobQueryError = ErrorType<void>
+
+
+/**
+ * @summary Read a workspace-scoped processing job without exposing its input payload
+ */
+
+export function useGetProcessingJob<TData = Awaited<ReturnType<typeof getProcessingJob>>, TError = ErrorType<void>>(
+ jobId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProcessingJob>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProcessingJobQueryOptions(jobId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetSessionUrl = () => {
 

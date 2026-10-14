@@ -756,7 +756,7 @@ export async function POST(
     );
   }
   try {
-    assertPermission(session, PERMISSIONS.screenshot_update);
+    assertPermission(session, PERMISSIONS.guide_update);
   } catch (error) {
     const failure = toAuthzFailure(error);
     if (failure !== null) {

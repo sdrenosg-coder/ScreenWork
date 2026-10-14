@@ -177,6 +177,7 @@ export interface EnqueueResult {
 /* -------------------------------------------------------------------------- */
 
 interface QueueInternals {
+  readonly concurrency: number;
   readonly connectionString: string;
   readonly ssl: boolean;
   readonly pollIntervalMs: number;
@@ -197,7 +198,9 @@ function readQueueConfig(): QueueInternals {
   const poll = Number(process.env.JOBS_POLL_INTERVAL_MS ?? "1000");
   const lockTtl = Number(process.env.JOBS_LOCK_TTL_MS ?? String(5 * 60_000));
   const maxAttempts = Number(process.env.JOBS_MAX_ATTEMPTS ?? "3");
+  const concurrency = Number(process.env.JOBS_CONCURRENCY ?? "4");
   return {
+    concurrency: Number.isFinite(concurrency) && concurrency > 0 ? Math.min(16, Math.floor(concurrency)) : 4,
     connectionString: raw.trim(),
     ssl,
     pollIntervalMs: Number.isFinite(poll) && poll > 0 ? poll : 1000,
@@ -659,6 +662,37 @@ export async function getJob(
   );
   if (result.rows.length === 0) return null;
   return normalizeJobRow(result.rows[0]);
+}
+
+/** Conservative free-processing limits while customer billing is disconnected. */
+export async function reserveAiBudget(workspaceId: string, jobId: string): Promise<{ reservedAt: string }> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('zipy-managed-ai-budget'))");
+    const selected = await client.query("SELECT result FROM jobs WHERE workspace_id = $1 AND id = $2 AND status = 'active' FOR UPDATE", [workspaceId, jobId]);
+    if (!selected.rowCount) throw new Error("The processing job is no longer active.");
+    const previous = (selected.rows[0] as { result: { aiUsage?: { reservedAt?: string } } | null }).result?.aiUsage?.reservedAt;
+    const since = new Date(Date.now() - 86400000).toISOString();
+    if (typeof previous === "string" && previous >= since) {
+      await client.query("COMMIT");
+      return { reservedAt: previous };
+    }
+    const counts = await client.query(
+      `SELECT COUNT(*) AS global_count, COUNT(*) FILTER (WHERE workspace_id = $1) AS workspace_count
+       FROM jobs WHERE result->'aiUsage'->>'reservedAt' >= $2`, [workspaceId, since]);
+    const count = counts.rows[0] as { workspace_count: string; global_count: string };
+    const workspaceCount = Number(count.workspace_count);
+    const globalCount = Number(count.global_count);
+    if (![workspaceCount, globalCount].every(Number.isFinite)) throw new Error("The AI processing budget could not be verified.");
+    if (workspaceCount >= 3) throw new Error("This workspace has reached its limit of 3 AI processing jobs per rolling 24 hours. Your source and existing guide have been preserved.");
+    if (globalCount >= 30) throw new Error("The application's daily AI processing budget has been reached. Customer billing is not connected; no draft was applied.");
+    const reservedAt = new Date().toISOString();
+    await client.query("UPDATE jobs SET result = jsonb_set(COALESCE(result, '{}'::jsonb), '{aiUsage}', $3::jsonb) WHERE workspace_id = $1 AND id = $2", [workspaceId, jobId, JSON.stringify({ reservedAt })]);
+    await client.query("COMMIT");
+    return { reservedAt };
+  } catch (error) { await client.query("ROLLBACK"); throw error; }
+  finally { client.release(); }
 }
 
 export interface ListJobsInput {

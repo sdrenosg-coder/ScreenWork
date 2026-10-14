@@ -35,6 +35,7 @@
 import { createHash } from "node:crypto";
 
 import { getConfig, type LlmProvider } from "@workspace/zipy/web/config";
+export type { LlmProvider } from "@workspace/zipy/web/config";
 
 /* -------------------------------------------------------------------------- */
 /* Errors                                                                      */

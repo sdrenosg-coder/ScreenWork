@@ -392,6 +392,8 @@ export function assertPermission(
   }
 }
 
+export type SessionLike = Parameters<typeof assertPermission>[0];
+
 /** Same as `assertPermission`, but does not require an active workspace. */
 export function assertPermissionNoWorkspace(
   session: Pick<SessionRecord, "workspaceRole"> | null,

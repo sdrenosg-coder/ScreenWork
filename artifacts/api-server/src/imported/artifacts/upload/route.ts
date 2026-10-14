@@ -294,10 +294,10 @@ interface CommonBody {
  * the URL. For every other kind the body must be a File part named `file`
  * (or, for `source_text`, either a `file` or a `text` form field).
  */
-function extractBytes(
+async function extractBytes(
   sourceKind: UploadSourceKind,
   form: FormData,
-): { ok: true; body: CommonBody } | { ok: false; status: number; message: string } {
+): Promise<{ ok: true; body: CommonBody } | { ok: false; status: number; message: string }> {
   if (sourceKind === "source_text") {
     const filePart = form.get("file");
     if (filePart && typeof filePart !== "string") {
@@ -696,7 +696,7 @@ export async function POST(req: Request): Promise<HttpResponse> {
       originalFilename: null,
     };
   } else {
-    const extract = extractBytes(sourceKind, form);
+    const extract = await extractBytes(sourceKind, form);
     if (!extract.ok) {
       return jsonError(extract.status, "invalid_body", extract.message);
     }

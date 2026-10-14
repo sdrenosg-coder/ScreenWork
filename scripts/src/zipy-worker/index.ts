@@ -48,6 +48,8 @@ import {
   type JobHandler,
   type JobKind,
 } from "@workspace/zipy/jobs/index";
+import { pipelineHandlers } from "@workspace/zipy/jobs/pipelineHandlers";
+import { getConfig } from "@workspace/zipy/web/config";
 
 /* -------------------------------------------------------------------------- */
 /* Configuration check                                                         */
@@ -91,7 +93,7 @@ function readWorkerConfig(): WorkerConfig {
   const storageRoot =
     process.env.STORAGE_LOCAL_ROOT ??
     process.env.OBJECT_STORE_LOCAL_ROOT ??
-    null;
+    getConfig().storage.localRoot;
   // s3 storage is considered configured for the worker if either a local root
   // is set (dev) or the S3 trio is complete.
   const s3Configured =
@@ -118,6 +120,7 @@ function readWorkerConfig(): WorkerConfig {
   }
 
   const llmProvidersConfigured: string[] = [];
+  if (process.env.AI_INTEGRATIONS_OPENAI_API_KEY && process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) llmProvidersConfigured.push("replit-openai");
   if (process.env.OPENAI_API_KEY) llmProvidersConfigured.push("openai");
   if (process.env.ANTHROPIC_API_KEY) llmProvidersConfigured.push("anthropic");
   if (process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY) {
@@ -209,7 +212,7 @@ function validateWorkerStartup(config: WorkerConfig): void {
 function registerPhaseHandlers(): void {
   // Intentionally empty in Phase 2. Called on every boot so tests can observe
   // that the hook ran without needing a live database.
-  const handlers: ReadonlyArray<{ kind: JobKind; handler: JobHandler }> = [];
+  const handlers: ReadonlyArray<{ kind: JobKind; handler: JobHandler }> = pipelineHandlers;
   for (const entry of handlers) {
     registerHandler({ kind: entry.kind, handler: entry.handler });
   }

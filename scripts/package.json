@@ -7,7 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:zipy": "playwright test --config playwright.config.ts",
-    "worker:zipy": "tsx src/zipy-worker/index.ts"
+    "worker:zipy": "cd ../artifacts/api-server && tsx ../../scripts/src/zipy-worker/index.ts"
   },
   "devDependencies": {
     "@workspace/zipy": "workspace:*",

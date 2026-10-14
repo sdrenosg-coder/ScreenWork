@@ -38,7 +38,7 @@ import {
   type PutObjectInput,
   type PutObjectResult,
   type SignedUrlInput,
-} from "./objectStore.ts";
+} from "./objectStore";
 
 const require = createRequire(import.meta.url);
 

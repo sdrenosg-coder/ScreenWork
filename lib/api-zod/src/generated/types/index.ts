@@ -6,14 +6,25 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './applyGuideDraftBody';
+export * from './approveGuideRevisionBody';
+export * from './createGuideDraftJob202';
+export * from './createGuideDraftJobBody';
+export * from './createGuideDraftJobBodySourceKind';
 export * from './downloadGuideFormat';
 export * from './downloadGuideParams';
 export * from './downloadPublishedGuide200Two';
 export * from './downloadPublishedGuideFormat';
 export * from './downloadPublishedGuideParams';
 export * from './getBrandingTheme200';
+export * from './getGuideDraftJob200';
+export * from './getGuideDraftJob200Draft';
+export * from './getGuideDraftJob200Options';
+export * from './getGuideDraftJob200Source';
+export * from './getGuideDraftJob200Status';
 export * from './getGuideVersions200';
 export * from './getGuideVersions200VersionsItem';
+export * from './getProcessingJob200';
 export * from './getPublishedGuideTheme200';
 export * from './getSession200';
 export * from './getWorkspaceActivity200';

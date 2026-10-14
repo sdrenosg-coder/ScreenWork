@@ -43,7 +43,7 @@ import {
   type PutObjectInput,
   type PutObjectResult,
   type SignedUrlInput,
-} from "./objectStore.ts";
+} from "./objectStore";
 
 interface LocalStorageConfig {
   readonly root: string;

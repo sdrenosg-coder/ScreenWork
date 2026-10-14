@@ -9,6 +9,109 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Queue a source-grounded AI draft without modifying the saved guide
+ */
+export const CreateGuideDraftJobParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const createGuideDraftJobBodySourceMin = 5;
+export const createGuideDraftJobBodySourceMax = 30000;
+
+export const createGuideDraftJobBodyLanguageMax = 60;
+
+export const createGuideDraftJobBodyToneMax = 30;
+
+export const createGuideDraftJobBodyBrandVoiceMax = 1000;
+
+export const createGuideDraftJobBodyTerminologyMax = 1000;
+
+
+
+export const CreateGuideDraftJobBody = zod.object({
+  "expectedVersion": zod.number().int().min(1),
+  "sourceKind": zod.enum(['text', 'url']),
+  "source": zod.string().min(createGuideDraftJobBodySourceMin).max(createGuideDraftJobBodySourceMax),
+  "language": zod.string().max(createGuideDraftJobBodyLanguageMax).optional(),
+  "tone": zod.string().max(createGuideDraftJobBodyToneMax).optional(),
+  "brandVoice": zod.string().max(createGuideDraftJobBodyBrandVoiceMax).optional(),
+  "terminology": zod.string().max(createGuideDraftJobBodyTerminologyMax).optional()
+})
+
+export const CreateGuideDraftJobResponse = zod.object({
+  "jobId": zod.string().uuid(),
+  "status": zod.string(),
+  "created": zod.boolean()
+})
+
+
+/**
+ * @summary Read the job state and completed draft in the active workspace
+ */
+export const GetGuideDraftJobParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "jobId": zod.coerce.string().uuid()
+})
+
+export const GetGuideDraftJobResponse = zod.object({
+  "jobId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'active', 'succeeded', 'failed', 'cancelled']),
+  "error": zod.string().nullable(),
+  "draft": zod.record(zod.string(), zod.unknown()).nullable(),
+  "expectedVersion": zod.number().int().optional(),
+  "source": zod.record(zod.string(), zod.unknown()).optional(),
+  "options": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Save a completed AI draft as a new revision requiring review
+ */
+export const ApplyGuideDraftParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "jobId": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ApplyGuideDraftBody = zod.object({
+  "expectedVersion": zod.number().int().min(1)
+})
+
+export const ApplyGuideDraftResponse = zod.unknown()
+
+
+/**
+ * @summary Record an authorized human approval of the current saved revision
+ */
+export const ApproveGuideRevisionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+
+
+export const ApproveGuideRevisionBody = zod.object({
+  "expectedVersion": zod.number().int().min(1),
+  "confirmed": zod.literal(true)
+})
+
+export const ApproveGuideRevisionResponse = zod.unknown()
+
+
+/**
+ * @summary Read a workspace-scoped processing job without exposing its input payload
+ */
+export const GetProcessingJobParams = zod.object({
+  "jobId": zod.coerce.string().uuid()
+})
+
+export const GetProcessingJobResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Read the authenticated active workspace
  */
 export const GetSessionResponse = zod.object({

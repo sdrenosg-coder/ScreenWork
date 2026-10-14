@@ -193,7 +193,7 @@ export async function hashStream(
         ? chunk
         : chunk instanceof Uint8Array
           ? Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)
-          : Buffer.from(chunk as ArrayBufferLike | string);
+          : typeof chunk === "string" ? Buffer.from(chunk) : Buffer.from(chunk as ArrayBuffer);
       size += buf.byteLength;
       hash.update(buf);
     }
@@ -223,9 +223,7 @@ export function teeHashing(source: Readable, label = "stream"): HashingStreamHan
   const hash = createHash(CONTENT_HASH_ALGORITHM);
   let size = 0;
   const pass = new Readable({
-    read(): void {
-      /* Pull mode; data is pushed from the source's data events below. */
-    },
+    read(): void { source.resume(); },
   });
   const done = new Promise<HashedPayload>((resolve, reject) => {
     source.on("data", (chunk: unknown) => {
@@ -233,12 +231,11 @@ export function teeHashing(source: Readable, label = "stream"): HashingStreamHan
         ? chunk
         : chunk instanceof Uint8Array
           ? Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)
-          : Buffer.from(chunk as ArrayBufferLike | string);
+          : typeof chunk === "string" ? Buffer.from(chunk) : Buffer.from(chunk as ArrayBuffer);
       size += buf.byteLength;
       hash.update(buf);
       if (!pass.push(buf)) {
         source.pause();
-        pass.once("drain", () => source.resume());
       }
     });
     source.on("end", () => {

@@ -224,13 +224,11 @@ export async function redactPii(
     const padded: BBox = {
       x: Math.max(0, Math.floor(b.x - paddingPx)),
       y: Math.max(0, Math.floor(b.y - paddingPx)),
-      width: 0,
-      height: 0,
+      width: Math.max(0, Math.min(input.width, Math.ceil(b.x + b.width + paddingPx)) - Math.max(0, Math.floor(b.x - paddingPx))),
+      height: Math.max(0, Math.min(input.height, Math.ceil(b.y + b.height + paddingPx)) - Math.max(0, Math.floor(b.y - paddingPx))),
     };
     const right = Math.min(input.width, Math.ceil(b.x + b.width + paddingPx));
     const bottom = Math.min(input.height, Math.ceil(b.y + b.height + paddingPx));
-    padded.width = Math.max(0, right - padded.x);
-    padded.height = Math.max(0, bottom - padded.y);
     if (padded.width <= 0 || padded.height <= 0) {
       skipped += 1;
       continue;
@@ -445,7 +443,7 @@ async function pixelatedCrop(source: Buffer, box: BBox, block: number): Promise<
   const downH = Math.max(1, Math.floor(box.height / blockSize));
   return await sharp(source, { failOn: "none" })
     .extract({ left: box.x, top: box.y, width: box.width, height: box.height })
-    .resize(downW, downH, { kernel: "box" })
+    .resize(downW, downH, { kernel: "lanczos3" })
     .resize(box.width, box.height, { kernel: "nearest" })
     .png()
     .toBuffer();

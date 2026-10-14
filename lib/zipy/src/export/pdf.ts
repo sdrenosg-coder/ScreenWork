@@ -218,9 +218,7 @@ export async function renderGuidePdf(
   } else if (guide.cover.author.length > 0) {
     pdf.setAuthor(guide.cover.author);
   }
-  for (const keyword of guide.cover.keywords) {
-    pdf.addKeyword(keyword);
-  }
+  pdf.setKeywords([...guide.cover.keywords]);
   if (guide.cover.locale.length > 0) {
     pdf.setLanguage(guide.cover.locale);
   }
@@ -616,7 +614,7 @@ function renderCallout(
   const innerWidth = CONTENT_WIDTH - paddingX * 2;
   const bodyFont = state.fonts.body;
   const titleFont = state.fonts.bodyBold;
-  const title = calloutTitle(block.kind);
+  const title = calloutTitle(block.severity);
   const titleHeight = FONT_SIZE_H3 * 1.2;
   const bodyLines = wrapText(block.text, bodyFont, FONT_SIZE_BODY, innerWidth);
   const bodyHeight = bodyLines.length * FONT_SIZE_BODY * LINE_HEIGHT_MULT;
@@ -630,14 +628,14 @@ function renderCallout(
     y: topY - height,
     width: CONTENT_WIDTH,
     height,
-    color: calloutBackground(block.kind),
+    color: calloutBackground(block.severity),
   });
   page.drawRectangle({
     x: MARGIN,
     y: topY - height,
     width: 3,
     height,
-    color: calloutAccent(block.kind),
+    color: calloutAccent(block.severity),
   });
   page.drawText(title, {
     x: MARGIN + paddingX,
@@ -660,7 +658,7 @@ function renderCallout(
   state.cursorY = topY - height - 8;
 }
 
-function calloutTitle(kind: GuideDocumentCallout["kind"]): string {
+function calloutTitle(kind: GuideDocumentCallout["severity"]): string {
   switch (kind) {
     case "tip":
       return "Tip";
@@ -671,7 +669,7 @@ function calloutTitle(kind: GuideDocumentCallout["kind"]): string {
   }
 }
 
-function calloutBackground(kind: GuideDocumentCallout["kind"]): RGB {
+function calloutBackground(kind: GuideDocumentCallout["severity"]): RGB {
   switch (kind) {
     case "tip":
       return COLOR_CALLOUT_TIP_BG;
@@ -682,7 +680,7 @@ function calloutBackground(kind: GuideDocumentCallout["kind"]): RGB {
   }
 }
 
-function calloutAccent(kind: GuideDocumentCallout["kind"]): RGB {
+function calloutAccent(kind: GuideDocumentCallout["severity"]): RGB {
   switch (kind) {
     case "tip":
       return rgb(0.20, 0.45, 0.85);
@@ -704,7 +702,7 @@ function renderChecklist(
   const textWidth = CONTENT_WIDTH - 18;
   for (const item of block.items) {
     const lines = wrapText(item, state.fonts.body, FONT_SIZE_BODY, textWidth);
-    wrapped.push(lines);
+    wrapped.push([...lines]);
     itemHeights.push(lines.length * FONT_SIZE_BODY * LINE_HEIGHT_MULT + 4);
   }
   const totalHeight = itemHeights.reduce((a, b) => a + b, 0) + 2;

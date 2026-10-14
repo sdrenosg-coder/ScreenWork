@@ -997,7 +997,7 @@ export async function PUT(
     );
   }
 
-  const session = await loadSessionAndAuthorize(req, PERMISSIONS.screenshot_update, "PUT");
+  const session = await loadSessionAndAuthorize(req, PERMISSIONS.guide_update, "PUT");
   if (session instanceof HttpResponse) return session;
   const workspaceId = session.activeWorkspaceId;
   if (workspaceId === null) {
@@ -1179,7 +1179,7 @@ export async function PUT(
 
 async function loadSessionAndAuthorize(
   req: Request,
-  permission: string,
+  permission: Parameters<typeof assertPermission>[1],
   methodLabel: string,
 ): Promise<SessionRecord | HttpResponse> {
   let session: SessionRecord | null;

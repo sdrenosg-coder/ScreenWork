@@ -60,24 +60,24 @@ import {
   type IntroPrereqsResult,
 } from "./introPrereqs";
 import {
-  generateStepText,
+  generateStepTextBatch,
   type StepTextLlmHandle,
-  type StepTextResult,
+  type GenerateStepTextResult as StepTextResult,
 } from "./stepText";
 import {
   generateTipsWarnings,
   type TipsWarningsLlmHandle,
-  type TipsWarningsResult,
+  type GenerateTipsWarningsResult as TipsWarningsResult,
 } from "./tipsWarnings";
 import {
   generateFaq,
   type FaqLlmHandle,
-  type FaqResult,
+  type GenerateFaqResult as FaqResult,
 } from "./faq";
 import {
   generateGlossary,
   type GlossaryLlmHandle,
-  type GlossaryResult,
+  type GenerateGlossaryResult as GlossaryResult,
 } from "./glossary";
 
 /* -------------------------------------------------------------------------- */
@@ -379,7 +379,7 @@ export async function generateGuideContent(
   let stepText: StepTextResult | null = null;
   if (layers.stepText) {
     try {
-      stepText = await generateStepText(plan, {
+      stepText = await generateStepTextBatch(plan, {
         llm: asHandleForTask<StepTextLlmHandle>(effectiveLlm, "content.stepText"),
         deterministic,
         ...(options.provider !== undefined ? { provider: options.provider } : {}),
@@ -464,7 +464,8 @@ export async function generateGuideContent(
         ...(options.model !== undefined ? { model: options.model } : {}),
         ...(options.style !== undefined ? { style: options.style } : {}),
         sources: options.sources ?? [],
-        generatedCorpus: corpus,
+        sourceExcerpts: corpus,
+        guideGoal: options.guideGoal ?? null,
       });
       for (const n of glossary.notes) notes.push(`[glossary] ${n}`);
     } catch (error) {
@@ -494,11 +495,11 @@ export async function generateGuideContent(
   // ---------------------------------------------------------- LLM marker --
   const usedLlm =
     (titleSummary !== null && titleSummary.titleSource === "llm") ||
-    (introPrereqs !== null && introPrereqs.source === "llm") ||
-    (stepText !== null && stepText.source === "llm") ||
-    (tipsWarnings !== null && tipsWarnings.source === "llm") ||
-    (faq !== null && faq.source === "llm") ||
-    (glossary !== null && glossary.source === "llm");
+    (introPrereqs !== null && (introPrereqs.introductionSource === "llm" || introPrereqs.prerequisitesSource === "llm")) ||
+    (stepText !== null && stepText.batchSource === "llm") ||
+    (tipsWarnings !== null && tipsWarnings.origin === "llm") ||
+    (faq !== null && faq.origin === "llm") ||
+    (glossary !== null && glossary.origin === "llm");
 
   const lastProvider: LlmProvider | null =
     options.provider ?? (usedLlm ? readProviderFromDraft(effectiveLlm) : null);

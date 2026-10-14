@@ -39,6 +39,84 @@ export interface HealthStatus {
   status: string;
 }
 
+export type CreateGuideDraftJobBodySourceKind = typeof CreateGuideDraftJobBodySourceKind[keyof typeof CreateGuideDraftJobBodySourceKind];
+
+
+export const CreateGuideDraftJobBodySourceKind = {
+  text: 'text',
+  url: 'url',
+} as const;
+
+export type CreateGuideDraftJobBody = {
+  /** @minimum 1 */
+  expectedVersion: number;
+  sourceKind: CreateGuideDraftJobBodySourceKind;
+  /**
+     * @minLength 5
+     * @maxLength 30000
+     */
+  source: string;
+  /** @maxLength 60 */
+  language?: string;
+  /** @maxLength 30 */
+  tone?: string;
+  /** @maxLength 1000 */
+  brandVoice?: string;
+  /** @maxLength 1000 */
+  terminology?: string;
+};
+
+export type CreateGuideDraftJob202 = {
+  jobId: string;
+  status: string;
+  created: boolean;
+};
+
+export type GetGuideDraftJob200Status = typeof GetGuideDraftJob200Status[keyof typeof GetGuideDraftJob200Status];
+
+
+export const GetGuideDraftJob200Status = {
+  pending: 'pending',
+  active: 'active',
+  succeeded: 'succeeded',
+  failed: 'failed',
+  cancelled: 'cancelled',
+} as const;
+
+/**
+ * @nullable
+ */
+export type GetGuideDraftJob200Draft = { [key: string]: unknown } | null;
+
+export type GetGuideDraftJob200Source = { [key: string]: unknown };
+
+export type GetGuideDraftJob200Options = { [key: string]: unknown };
+
+export type GetGuideDraftJob200 = {
+  jobId: string;
+  status: GetGuideDraftJob200Status;
+  /** @nullable */
+  error: string | null;
+  /** @nullable */
+  draft: GetGuideDraftJob200Draft;
+  expectedVersion?: number;
+  source?: GetGuideDraftJob200Source;
+  options?: GetGuideDraftJob200Options;
+};
+
+export type ApplyGuideDraftBody = {
+  /** @minimum 1 */
+  expectedVersion: number;
+};
+
+export type ApproveGuideRevisionBody = {
+  /** @minimum 1 */
+  expectedVersion: number;
+  confirmed: true;
+};
+
+export type GetProcessingJob200 = { [key: string]: unknown };
+
 export type GetSession200 = {
   userId: string;
   workspaceId: string;

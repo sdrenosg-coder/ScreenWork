@@ -617,7 +617,6 @@ export async function POST(req: Request): Promise<HttpResponse> {
   try {
     await objectStore.put(storageKey, bytes, {
       contentType: declaredMime.length > 0 ? declaredMime : defaultMimeForKind(resolved.policy.kind),
-      contentLength: bytes.length,
       metadata: {
         "zipy-content-hash": contentHash,
         "zipy-original-filename": filename,

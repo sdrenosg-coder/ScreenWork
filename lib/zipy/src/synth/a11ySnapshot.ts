@@ -759,7 +759,10 @@ export function rehydrateA11ySnapshot(value: unknown): A11ySnapshot {
       states: Array.isArray(o["states"])
         ? (o["states"] as unknown[]).filter((s): s is string => typeof s === "string")
         : [],
-      properties: readProperties({ role: "x", properties: o["properties"] }),
+      properties: readProperties({ role: "x", properties: Object.fromEntries(
+        Object.entries(typeof o["properties"] === "object" && o["properties"] !== null ? o["properties"] : {})
+          .filter((entry): entry is [string, string | number | boolean] => ["string", "number", "boolean"].includes(typeof entry[1])),
+      ) }),
       depth:
         typeof o["depth"] === "number" && Number.isFinite(o["depth"] as number)
           ? Math.max(0, Math.floor(o["depth"] as number))

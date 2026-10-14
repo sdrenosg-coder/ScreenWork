@@ -8,6 +8,7 @@ import { registerSaasRoutes } from "./saas-routes";
 import { registerWorkspaceReports } from "./workspace-reports";
 import { registerBrandingRoutes } from "./branding-routes";
 import { registerReaderRoutes } from "./reader-routes";
+import { registerDraftRoutes } from "./draft-routes";
 
 const app: Express = express();
 
@@ -39,6 +40,7 @@ registerSaasRoutes(app);
 registerWorkspaceReports(app);
 registerBrandingRoutes(app);
 registerReaderRoutes(app);
+registerDraftRoutes(app);
 registerZipyRoutes(app);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

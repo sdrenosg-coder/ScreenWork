@@ -247,7 +247,7 @@ async function authenticate(req: Request): Promise<AuthedContext | HttpResponse>
     );
   }
   try {
-    assertPermission(session as unknown as SessionLike, PERMISSIONS.admin_read);
+    assertPermission(session as unknown as SessionLike, PERMISSIONS.workspace_settings_update);
   } catch (error) {
     const failure = toAuthzFailure(error);
     if (failure !== null) {

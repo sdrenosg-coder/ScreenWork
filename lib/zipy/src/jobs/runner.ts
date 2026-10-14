@@ -38,7 +38,7 @@ import {
   sleep,
   type JobKind,
   type JobRow,
-} from "./queue.ts";
+} from "./queue";
 
 /* -------------------------------------------------------------------------- */
 /* Handler contract                                                            */
@@ -118,9 +118,9 @@ export interface RunnerOutcome {
 
 interface RunnerState {
   readonly handlers: Map<JobKind, JobHandler>;
-  readonly workerId: string;
+  workerId: string;
   readonly inFlight: Set<Promise<void>>;
-  readonly abortController: AbortController;
+  abortController: AbortController;
   running: boolean;
   stopped: Promise<void> | null;
   stopResolve: (() => void) | null;
@@ -461,7 +461,7 @@ async function runOne(
 
 export function runnerState(): {
   readonly running: boolean;
-  readonly workerId: string;
+  workerId: string;
   readonly registeredKinds: readonly JobKind[];
   readonly inFlight: number;
 } {

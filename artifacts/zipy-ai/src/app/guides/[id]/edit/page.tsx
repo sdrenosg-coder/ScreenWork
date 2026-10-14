@@ -41,6 +41,7 @@ import {
 } from "react";
 import { Link } from "wouter";
 import GuideSharing from "../../../../components/GuideSharing";
+import DraftProcessing from "../../../../components/DraftProcessing";
 import StepEditor, {
   type EditableStep,
   type StepEditorChange,
@@ -481,6 +482,7 @@ export default function GuideEditPage({
       {state.kind === "ready" && (
         <>
           <GuideSharing guideId={guideId} currentVersion={state.response.guide.version} dirty={canSave()} />
+          <DraftProcessing guideId={guideId} version={state.response.guide.version} dirty={canSave()} />
           <StepEditor
             guideId={guideId}
             steps={steps}

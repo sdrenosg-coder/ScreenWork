@@ -1,4 +1,7 @@
 import { Link } from "wouter";
+import "./landing/landing.css";
+import FeatureExplorer from "./landing/FeatureExplorer";
+import { HowItWorks, Readiness, FinalCta } from "./landing/Sections";
 import { ArrowUpRight, BookOpen, Layers3, LockKeyhole, Zap } from "lucide-react";
 
 export default function Welcome() {
@@ -16,6 +19,7 @@ export default function Welcome() {
             <p className="z-welcome-description">Turn everyday processes into step-by-step guides your team can follow. Write, refine, keep every revision, and share only when you're ready.</p>
             <div className="z-welcome-actions">
               <Link href="/signup" className="z-btn z-btn-primary">Create your workspace <ArrowUpRight size={18} aria-hidden /></Link>
+              <a href="#explore" className="z-btn">Explore all 26 workflows</a>
               <Link href="/login" className="z-btn">I already have an account</Link>
             </div>
             <p className="z-welcome-small">Your drafts are private. You control when they go public.</p>
@@ -33,11 +37,15 @@ export default function Welcome() {
             </article>
           </div>
         </div>
+        <FeatureExplorer />
+        <HowItWorks />
         <section className="z-welcome-benefits" aria-label="What you can do">
           <div><BookOpen aria-hidden /><h2>Write it once.</h2><p>Create and edit clear instructions. Reorder steps as your process evolves.</p></div>
           <div><Layers3 aria-hidden /><h2>Keep the progress.</h2><p>Save revisions and restore earlier work without overwriting someone else's changes.</p></div>
           <div><LockKeyhole aria-hidden /><h2>Share with intention.</h2><p>Publish a saved snapshot, or make it private again. Unpublished edits stay private.</p></div>
         </section>
+        <Readiness />
+        <FinalCta />
       </main>
       <footer className="z-welcome-footer">Zipy AI <span>AI generation, paid subscriptions and team invitations are still being built. <Link href="/features">View full feature status</Link></span></footer>
     </div>

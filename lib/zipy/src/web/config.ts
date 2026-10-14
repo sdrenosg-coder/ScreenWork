@@ -299,7 +299,7 @@ function buildConfig(): ZipyConfig {
   const port = readNumber(["PORT"], 3000);
 
   const publicBaseUrl = ensureHttpUrl(
-    readString(["PUBLIC_BASE_URL", "APP_URL", "REPLIT_DEV_DOMAIN"]).replace(
+    (readString(["PUBLIC_BASE_URL", "APP_URL", "REPLIT_DEV_DOMAIN"]) ?? "").replace(
       /^www\./,
       "https://",
     ) || null,

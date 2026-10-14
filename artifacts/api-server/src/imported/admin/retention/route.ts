@@ -133,13 +133,13 @@ interface AuthedContext {
 
 async function authenticate(
   req: Request,
-  permission: string,
+  permission: Parameters<typeof assertPermission>[1],
 ): Promise<AuthedContext | HttpResponse> {
   let session: SessionRecord | null;
   try {
     session = await loadSession({
       cookieHeader: req.headers.get("cookie"),
-      touch: permission === PERMISSIONS.admin_update,
+      touch: permission === PERMISSIONS.workspace_settings_update,
     });
   } catch (error) {
     process.stderr.write(
@@ -309,7 +309,7 @@ export async function GET(req: Request): Promise<HttpResponse> {
   const gate = configGate();
   if (gate !== null) return gate;
 
-  const ctxOrError = await authenticate(req, PERMISSIONS.admin_read);
+  const ctxOrError = await authenticate(req, PERMISSIONS.workspace_settings_update);
   if (ctxOrError instanceof HttpResponse) return ctxOrError;
   const { workspaceId } = ctxOrError;
 
@@ -451,7 +451,7 @@ export async function PUT(req: Request): Promise<HttpResponse> {
   const gate = configGate();
   if (gate !== null) return gate;
 
-  const ctxOrError = await authenticate(req, PERMISSIONS.admin_update);
+  const ctxOrError = await authenticate(req, PERMISSIONS.workspace_settings_update);
   if (ctxOrError instanceof HttpResponse) return ctxOrError;
   const { session, workspaceId } = ctxOrError;
 

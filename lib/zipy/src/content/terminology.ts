@@ -114,7 +114,8 @@ export interface TerminologySkip {
     | "empty"
     | "duplicate"
     | "case-conflict"
-    | "expansion-without-term";
+    | "expansion-without-term"
+    | "circular-synonym";
   readonly detail?: string;
 }
 

@@ -216,7 +216,7 @@ function buildNotes(
 
 async function loadSessionAndAuthorize(
   req: Request,
-  permission: string,
+  permission: Parameters<typeof assertPermission>[1],
   label: string,
 ): Promise<SessionRecord | HttpResponse> {
   let session: SessionRecord | null;

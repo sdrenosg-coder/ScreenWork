@@ -14,7 +14,7 @@ import {
 } from "./objectStore";
 export * from "./objectStore";
 
-type PutOptions = { contentType?: string; expectedSha256?: string };
+type PutOptions = { contentType?: string; expectedSha256?: string; metadata?: Readonly<Record<string, string>> };
 function validateKey(key: string, allowEmpty = false): string {
   if (typeof key !== "string" || (!allowEmpty && !key) ||
       key.startsWith("/") || key.includes("..") || key.includes("\\") || key.includes("\0")) {

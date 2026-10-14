@@ -11,6 +11,125 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /guides/{id}/draft-jobs:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+    post:
+      operationId: createGuideDraftJob
+      summary: Queue a source-grounded AI draft without modifying the saved guide
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, sourceKind, source]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                sourceKind: { type: string, enum: [text, url] }
+                source: { type: string, minLength: 5, maxLength: 30000 }
+                language: { type: string, maxLength: 60 }
+                tone: { type: string, maxLength: 30 }
+                brandVoice: { type: string, maxLength: 1000 }
+                terminology: { type: string, maxLength: 1000 }
+      responses:
+        "202":
+          description: Queued or existing idempotent draft job
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [jobId, status, created]
+                properties:
+                  jobId: { type: string, format: uuid }
+                  status: { type: string }
+                  created: { type: boolean }
+        "409": { description: The guide revision changed }
+        "503": { description: AI processing is not configured }
+  /guides/{id}/draft-jobs/{jobId}:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+      - name: jobId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getGuideDraftJob
+      summary: Read the job state and completed draft in the active workspace
+      responses:
+        "200":
+          description: Processing state and optional preview
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [jobId, status, error, draft]
+                properties:
+                  jobId: { type: string, format: uuid }
+                  status: { type: string, enum: [pending, active, succeeded, failed, cancelled] }
+                  error: { type: [string, "null"] }
+                  draft: { type: [object, "null"], additionalProperties: true }
+                  expectedVersion: { type: integer }
+                  source: { type: object, additionalProperties: true }
+                  options: { type: object, additionalProperties: true }
+        "404": { description: No matching job in this workspace and guide }
+  /guides/{id}/draft-jobs/{jobId}/apply:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+      - name: jobId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: applyGuideDraft
+      summary: Save a completed AI draft as a new revision requiring review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+      responses:
+        "200": { description: New saved guide revision }
+        "409": { description: Existing guide edits were preserved because the revision changed }
+  /guides/{id}/review:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+    post:
+      operationId: approveGuideRevision
+      summary: Record an authorized human approval of the current saved revision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, confirmed]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                confirmed: { type: boolean, const: true }
+      responses:
+        "200": { description: Current revision approved for publication }
+        "409": { description: Revision changed and requires a new review }
+  /jobs/{jobId}:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getProcessingJob
+      summary: Read a workspace-scoped processing job without exposing its input payload
+      responses:
+        "200":
+          description: Job metadata and result
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "404": { description: Job not found in the active workspace }
   /session:
     get:
       operationId: getSession

@@ -67,10 +67,10 @@ export class GlossaryError extends Error {
     code: GlossaryErrorCode,
     detail: Readonly<Record<string, unknown>> = {},
   ) {
+    super(message);
     this.name = "GlossaryError";
     this.code = code;
     this.detail = detail;
-    super(message);
   }
 }
 
@@ -157,6 +157,7 @@ export interface GlossaryStyle {
 }
 
 export interface GenerateGlossaryOptions {
+  readonly guideGoal?: string | null;
   readonly llm?: GlossaryLlmHandle | null;
   readonly deterministic?: boolean;
   readonly provider?: LlmProvider;
