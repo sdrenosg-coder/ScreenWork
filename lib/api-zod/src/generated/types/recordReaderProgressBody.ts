@@ -10,4 +10,21 @@ import type { RecordReaderProgressBodyKind } from './recordReaderProgressBodyKin
 export type RecordReaderProgressBody = {
   kind: RecordReaderProgressBodyKind;
   visitId: string;
+  /**
+     * Required for step events; optional for a step rating.
+     * @minimum 1
+     */
+  stepIndex?: number;
+  /**
+     * Search phrase used transiently to calculate matches; only its hash and length are stored.
+     * @minLength 1
+     * @maxLength 200
+     */
+  query?: string;
+  /**
+     * Required for feedback.
+     * @minimum 1
+     * @maximum 5
+     */
+  rating?: number;
 };

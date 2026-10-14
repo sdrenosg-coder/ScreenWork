@@ -2278,7 +2278,7 @@ export const getRecordReaderProgressUrl = (slug: string,) => {
 }
 
 /**
- * @summary Idempotently record an anonymous guide session or explicit completion
+ * @summary Record anonymous guide progress, step reach, searches and ratings
  */
 export const recordReaderProgress = async (slug: string,
     recordReaderProgressBody: RecordReaderProgressBody, options?: Parameters<typeof customFetch>[1]): Promise<RecordReaderProgress200> => {
@@ -2345,7 +2345,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RecordReaderProgressMutationVariables = {slug: string;data: BodyType<RecordReaderProgressBody>}
 
     /**
- * @summary Idempotently record an anonymous guide session or explicit completion
+ * @summary Record anonymous guide progress, step reach, searches and ratings
  */
 export const useRecordReaderProgress = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordReaderProgress>>, TError,RecordReaderProgressMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

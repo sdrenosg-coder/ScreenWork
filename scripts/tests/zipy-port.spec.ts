@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import pg from "pg";
 import path from "node:path";
 import { forWorkspace } from "@workspace/zipy/storage/routeStore";
@@ -9,7 +9,7 @@ import { registerObjectStoreDriver } from "@workspace/zipy/storage/objectStore";
 import { LocalObjectStoreDriver } from "@workspace/zipy/storage/localDriver";
 import { getConfig } from "@workspace/zipy/web/config";
 
-test("SaaS guide editing, versions, publication privacy and list pagination", async ({ request }) => {
+test("SaaS guide editing, versions, publication privacy and list pagination", async ({ request, page }) => {
   const emails = [`saas-${randomUUID()}@example.test`, `other-${randomUUID()}@example.test`];
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
   const cleanup: { store: Awaited<ReturnType<typeof forWorkspace>>; keys: string[] }[] = [];
@@ -85,6 +85,46 @@ test("SaaS guide editing, versions, publication privacy and list pagination", as
     for (let i = 0; i < 2; i++) expect((await request.post(`/api/public-guides/${slug}/events`, { data: { kind: "complete", visitId } })).status()).toBe(200);
     const report = await (await request.get("/api/analytics/events?kind=usage&window=7")).json();
     expect(report.report).toMatchObject({ guideCount: 1, totalViews: 1, completions: 1, completionRate: 1, uniqueViewers: null });
+    const unmatchedPhrase = "not found reader@example.test";
+    const tracking = [
+      { kind: "step-view", stepIndex: 1 },
+      { kind: "step-complete", stepIndex: 1 },
+      { kind: "search", query: unmatchedPhrase },
+      { kind: "feedback", stepIndex: 1, rating: 2 },
+    ];
+    for (const event of tracking) {
+      const response = await request.post(`/api/public-guides/${slug}/events`, { data: { ...event, visitId } });
+      expect(response.status(), await response.text()).toBe(200);
+    }
+    const searchKey = `reader-events/${id}/${visitId}-search-${createHash("sha256").update(unmatchedPhrase).digest("hex")}.json`;
+    fixture.keys.push(searchKey, ...["step-view-1", "step-complete-1", "feedback-1"].map(kind => `reader-events/${id}/${visitId}-${kind}.json`));
+    const searchRecord = (await store.get(searchKey))!.toString();
+    expect(searchRecord).not.toContain(unmatchedPhrase);
+    expect(searchRecord).not.toContain("reader@example.test");
+    expect(JSON.parse(searchRecord)).toMatchObject({ kind: "search", resultCount: 0, queryLength: unmatchedPhrase.length });
+    const gap = await (await request.get("/api/analytics/events?kind=content-gap&window=7")).json();
+    expect(gap.report).toMatchObject({ searchCount: 1, unmatchedSearches: 1, ratingCount: 1, averageRating: 2 });
+    expect(gap.report.topUnmatchedQueries).toHaveLength(1);
+    expect(gap.report.lowRatedSteps).toMatchObject([{ stepIndex: 1, averageRating: 2, negativeFeedback: 1 }]);
+    const performance = await (await request.get("/api/analytics/events?kind=performance&window=7")).json();
+    expect(performance.report).toMatchObject({ averageStepsCompleted: 1 });
+    expect(performance.report.worstDropOffSteps).toMatchObject([{ stepIndex: 1, reached: 1, dropped: 0 }]);
+    for (const data of [
+      { kind: "step-view", stepIndex: 2 }, { kind: "feedback", rating: 6 },
+      { kind: "search", query: "" }, { kind: "view", stepIndex: 1 },
+    ]) expect((await request.post(`/api/public-guides/${slug}/events`, { data: { ...data, visitId } })).status()).toBe(400);
+    expect((await request.post(`/api/public-guides/${slug}/events`, { data: { kind: "step-complete", stepIndex: 1, visitId: randomUUID() } })).status()).toBe(409);
+    await page.goto(`/p/${slug}`);
+    await expect(page.getByRole("heading", { name: "SaaS regression guide", exact: true })).toBeVisible();
+    await page.getByPlaceholder("Find a step…").fill("Published description");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(page.getByRole("link", { name: "1. Visible step" })).toBeVisible();
+    await page.getByRole("button", { name: "I completed this step" }).click();
+    await expect(page.getByRole("button", { name: "Step completed", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Rate guide 5 out of 5", exact: true }).click();
+    await expect(page.getByText("Your anonymous rating was saved. You can change it.")).toBeVisible();
+    const readerKeys = await store.list(`reader-events/${id}/`);
+    fixture.keys.push(...readerKeys.entries.map(entry => entry.key));
     for (const kind of ["performance", "content-gap", "executive"]) {
       const response = await request.get(`/api/analytics/events?kind=${kind}&window=30`);
       expect(response.status(), await response.text()).toBe(200);

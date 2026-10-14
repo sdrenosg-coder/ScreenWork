@@ -549,7 +549,7 @@ export const GetWorkspaceActivityResponse = zod.object({
 
 
 /**
- * @summary Idempotently record an anonymous guide session or explicit completion
+ * @summary Record anonymous guide progress, step reach, searches and ratings
  */
 export const recordReaderProgressPathSlugMax = 160;
 
@@ -559,9 +559,19 @@ export const RecordReaderProgressParams = zod.object({
   "slug": zod.coerce.string().max(recordReaderProgressPathSlugMax)
 })
 
+
+export const recordReaderProgressBodyQueryMax = 200;
+
+export const recordReaderProgressBodyRatingMax = 5;
+
+
+
 export const RecordReaderProgressBody = zod.object({
-  "kind": zod.enum(['view', 'complete']),
-  "visitId": zod.string().uuid()
+  "kind": zod.enum(['view', 'complete', 'step-view', 'step-complete', 'search', 'feedback']),
+  "visitId": zod.string().uuid(),
+  "stepIndex": zod.number().int().min(1).optional().describe('Required for step events; optional for a step rating.'),
+  "query": zod.string().min(1).max(recordReaderProgressBodyQueryMax).optional().describe('Search phrase used transiently to calculate matches; only its hash and length are stored.'),
+  "rating": zod.number().int().min(1).max(recordReaderProgressBodyRatingMax).optional().describe('Required for feedback.')
 })
 
 export const RecordReaderProgressResponse = zod.object({

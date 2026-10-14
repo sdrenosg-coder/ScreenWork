@@ -45,11 +45,18 @@ export default function VisualTools({ guideId }: { guideId: string }) {
   const capture = () => { setErr(""); setMsg(""); mut.mutate({ id: guideId, data: { action: "capture", url: url.trim() } }, { onSuccess: () => { setMsg("Capture queued. It appears below when the browser finishes."); setUrl(""); void q.refetch(); }, onError: onErr }); };
   const save = () => { if (!current || version === null) return; setErr(""); setMsg("");
     mut.mutate({ id: guideId, data: { action: "annotate", sourceJobId: src, stepId, expectedVersion: version, altText: alt.trim(), marks } }, { onSuccess: (r) => { setSaved(true); setAck(false); setMsg(`${str((r as Record<string, unknown>).message, "Annotation saved")} Version updated to ${str((r as Record<string, unknown>).version, "a new version")}. Reload the guide to see it in the editor.`); void q.refetch(); }, onError: onErr }); };
+  const detect = () => { if (!current) return; setErr(""); setMsg("");
+    mut.mutate({ id: guideId, data: { action: "detect-pii", sourceJobId: src } }, { onSuccess: r => {
+      const result = r as Record<string, unknown>;
+      const suggestions = arr(result.marks).map(mark => ({ kind: "redact" as const, x: Number(mark.x), y: Number(mark.y), w: Number(mark.w), h: Number(mark.h) }));
+      setMarks(previous => [...previous, ...suggestions].slice(0, 30)); setSaved(false); setAck(false);
+      setMsg(`${Number(result.detectionCount) || 0} sensitive regions suggested. ${str(result.message)}${result.truncated ? " Only 30 suggestions are shown; review the remaining regions manually." : ""}`);
+    }, onError: onErr }); };
   const canSave = !!current && !!stepId && alt.trim().length > 0 && marks.length > 0 && ack && !mut.isPending && version !== null;
   return (
     <section className="zs-sec" aria-labelledby="zv-h" data-testid="visual-tools" style={{ marginTop: 16 }}>
       <h2 id="zv-h">Visual tools</h2>
-      <p>Capture a public web page with a read-only browser (no sign-in, clicks or form submission), then annotate it by hand. Redaction is manual and must be reviewed by a person; Zipy does not detect personal data automatically.</p>
+      <p>Capture a public web page with a read-only browser, or select an uploaded image. Draw callouts and ask local OCR to suggest sensitive-text masks. Automatic suggestions can miss personal information and must be reviewed before publishing.</p>
       <form className="zs-form" onSubmit={(e) => { e.preventDefault(); capture(); }}>
         <label>Public page URL (https)<input type="url" data-testid="browser-url" value={url} onChange={(e) => setUrl(e.target.value)} required placeholder="https://example.com/help" /></label>
         <button className="z-btn z-btn-primary" data-testid="browser-capture" disabled={mut.isPending || !url.trim()}>Capture page</button>
@@ -60,9 +67,11 @@ export default function VisualTools({ guideId }: { guideId: string }) {
       )}
       {anyPending && <p role="status">Capturing... checking every 2.5 seconds, up to 120 times.</p>}
       <label style={{ display: "grid", gap: 4, fontWeight: 600, fontSize: 13 }}>Source image
-        <select data-testid="visual-source" value={src} onChange={(e) => { setSrc(e.target.value); setMarks([]); setSaved(false); }}>
+        <select data-testid="visual-source" disabled={mut.isPending} value={src} onChange={(e) => { setSrc(e.target.value); setMarks([]); setSaved(false); setAck(false); setMsg(""); }}>
           <option value="">Choose a succeeded capture</option>{ready.map((i) => <option key={str(i.jobId)} value={str(i.jobId)}>{str(i.name, str(i.jobId))}</option>)}</select></label>
       {current && (<>
+        <div><button type="button" className="z-btn" data-testid="detect-pii" disabled={mut.isPending || marks.length >= 30} onClick={detect}>{mut.isPending ? "Working…" : "Detect sensitive text"}</button>
+          <p style={{ fontSize: 12 }}>Detection runs locally; no screenshot is sent to an AI provider for this scan. Suggestions are not saved until you review and save the annotation.</p></div>
         <div className="zs-form" role="group" aria-label="Annotation tool">
           <label>Tool<select data-testid="annotation-tool" value={tool} onChange={(e) => setTool(e.target.value as Kind)}><option value="box">Box</option><option value="arrow">Arrow (top-left to bottom-right)</option><option value="label">Label</option><option value="redact">Redact (solid black, irreversible)</option></select></label>
           {tool === "label" && <label>Label text<input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={80} /></label>}

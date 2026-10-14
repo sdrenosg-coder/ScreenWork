@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { PERMISSIONS } from "@workspace/zipy/web/rbac/permissions";
 import { ApiFailure, endpoint, workspace, read, type Store, type RecordData } from "./saas-routes";
+import { readerInsights } from "./reader-analytics";
 
 export async function listRecords(store: Store, prefix: string, accept: (key: string) => boolean = key => key.endsWith(".json")) {
   const records: RecordData[] = [];
@@ -64,6 +65,7 @@ export function registerWorkspaceReports(app: Express) {
       listRecords(store, "reader-events/"),
     ]);
     const events = scanned.records.filter(event => typeof event.at === "string" && event.at >= fromIso && event.at <= generatedAt);
+    const insights = readerInsights(events, guides.records);
     const rows = guides.records.map(guide => {
       const views = events.filter(event => event.guideId === guide.id && event.kind === "view");
       const visits = new Set(views.map(event => event.visitId));
@@ -91,9 +93,9 @@ export function registerWorkspaceReports(app: Express) {
     if (kind === "usage") {
       report = { ...base, guideCount: guides.records.length, publishedGuideCount, totalViews, uniqueViewers: null, completions, completionRate: totalViews ? completions / totalViews : null, perGuide: rows, notes };
     } else if (kind === "performance") {
-      report = { ...base, averageStepsCompleted: null, worstDropOffSteps: [], goodCompletionGuides: rows.filter(row => row.views > 0 && Number(row.completionRate) >= .7), weakCompletionGuides: rows.filter(row => row.views > 0 && Number(row.completionRate) < .7), notes: [...notes, "Step-level reach and drop-off tracking is not yet instrumented. Those measurements are unavailable, not zero."] };
+      report = { ...base, averageStepsCompleted: insights.hasStepEvents ? insights.averageStepsCompleted : null, worstDropOffSteps: insights.worstDropOffSteps, goodCompletionGuides: rows.filter(row => row.views > 0 && Number(row.completionRate) >= .7), weakCompletionGuides: rows.filter(row => row.views > 0 && Number(row.completionRate) < .7), notes: [...notes, "Step reach is recorded when a step is visible. Step completion is explicitly marked. Drop-off is inferred from recorded reach, not a claim that a reader failed the process."] };
     } else if (kind === "content-gap") {
-      report = { ...base, topUnmatchedQueries: [], lowRatedSteps: [], missingTopics: [], notes: ["Search queries and step ratings are not yet collected. No content-gap conclusions are available."] };
+      report = { ...base, topUnmatchedQueries: insights.topUnmatchedQueries, lowRatedSteps: insights.lowRatedSteps, missingTopics: [], searchCount: insights.searches, unmatchedSearches: insights.unmatchedSearches, ratingCount: insights.ratings, averageRating: insights.averageRating, notes: ["Searches and 1–5 ratings are collected from public readers. Search phrases are never stored: hashes group repeated searches without exposing their text.", "Missing topics cannot be named from private query hashes. Low ratings and zero-result counts identify where authors should investigate."] };
     } else {
       report = {
         ...base, headline: `${totalViews} recorded guide sessions in ${days} days`,
@@ -104,7 +106,7 @@ export function registerWorkspaceReports(app: Express) {
     }
     const truncated = guides.truncated || scanned.truncated;
     res.json({
-      report, provenance: { sources: inputs, missing: kind === "content-gap" ? ["Search and rating telemetry"] : kind === "performance" ? ["Step-level reach telemetry"] : ["Cross-session viewer identity"], aggregationErrors: [] },
+      report, provenance: { sources: inputs, missing: kind === "content-gap" ? [...(!insights.hasSearchEvents ? ["No search events in this window"] : []), ...(!insights.hasRatings ? ["No ratings in this window"] : []), "Raw search phrases (not collected)"] : kind === "performance" ? (!insights.hasStepEvents ? ["No step events in this window"] : []) : ["Cross-session viewer identity (not collected)"], aggregationErrors: [] },
       scan: { segmentsRead: guides.segments + scanned.segments, eventsRead: scanned.records.length, truncated },
       warnings: truncated ? ["The scan reached its safety limit. Counts are partial; do not interpret them as complete totals."] : [],
     });

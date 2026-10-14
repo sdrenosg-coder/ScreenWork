@@ -521,7 +521,7 @@ paths:
       - $ref: "#/components/parameters/PublicSlug"
     post:
       operationId: recordReaderProgress
-      summary: Idempotently record an anonymous guide session or explicit completion
+      summary: Record anonymous guide progress, step reach, searches and ratings
       requestBody:
         required: true
         content:
@@ -530,8 +530,11 @@ paths:
               type: object
               required: [kind, visitId]
               properties:
-                kind: { type: string, enum: [view, complete] }
+                kind: { type: string, enum: [view, complete, step-view, step-complete, search, feedback] }
                 visitId: { type: string, format: uuid }
+                stepIndex: { type: integer, minimum: 1, description: Required for step events; optional for a step rating. }
+                query: { type: string, minLength: 1, maxLength: 200, description: Search phrase used transiently to calculate matches; only its hash and length are stored. }
+                rating: { type: integer, minimum: 1, maximum: 5, description: Required for feedback. }
       responses:
         "200":
           description: Recorded or already recorded

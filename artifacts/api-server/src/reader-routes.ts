@@ -40,22 +40,49 @@ export function registerReaderRoutes(app: Express) {
   app.post("/api/public-guides/:slug/events", endpoint(async (req, res) => {
     if (Buffer.isBuffer(req.body) && req.body.length > 1024) throw new ApiFailure(413, "validation_error", "The tracking event is too large.");
     const body = objectBody(req);
-    if (!["view", "complete"].includes(String(body.kind)) || !UUID.test(String(body.visitId))) {
+    if (!["view", "complete", "step-view", "step-complete", "search", "feedback"].includes(String(body.kind)) || !UUID.test(String(body.visitId))) {
       throw new ApiFailure(400, "validation_error", "A valid anonymous visit and event kind are required.");
     }
-    const { store, guideId, workspaceId } = await published(req);
+    const { store, guideId, workspaceId, snapshot } = await published(req);
     rateLimit(req, guideId);
+    const steps = Array.isArray(snapshot.steps) ? snapshot.steps as RecordData[] : [];
+    const kind = String(body.kind);
+    const stepIndex = body.stepIndex;
+    if (stepIndex !== undefined && !kind.startsWith("step-") && kind !== "feedback") {
+      throw new ApiFailure(400, "validation_error", "A step index is only allowed on a step event or rating.");
+    }
+    if ((kind.startsWith("step-") || stepIndex !== undefined) &&
+      (!Number.isInteger(stepIndex) || Number(stepIndex) < 1 || Number(stepIndex) > steps.length)) {
+      throw new ApiFailure(400, "validation_error", "Choose a step in this published guide.");
+    }
+    if (kind === "feedback" && (!Number.isInteger(body.rating) || Number(body.rating) < 1 || Number(body.rating) > 5)) {
+      throw new ApiFailure(400, "validation_error", "A rating must be between 1 and 5.");
+    }
+    if (kind === "search" && (typeof body.query !== "string" || !body.query.trim() || body.query.length > 200)) {
+      throw new ApiFailure(400, "validation_error", "Search phrases must contain 1–200 characters.");
+    }
+    const query = kind === "search" ? String(body.query).trim().toLocaleLowerCase() : "";
+    const queryHash = query ? createHash("sha256").update(query).digest("hex") : null;
+    const resultCount = query ? steps.filter(step => `${step.title ?? ""} ${step.description ?? ""}`.toLocaleLowerCase().includes(query)).length : null;
+    const suffix = kind === "search" ? `search-${queryHash}` : stepIndex !== undefined ? `${kind}-${stepIndex}` : kind;
     const viewKey = `reader-events/${guideId}/${body.visitId}-view.json`;
     const completeKey = `reader-events/${guideId}/${body.visitId}-complete.json`;
+    const eventKey = `reader-events/${guideId}/${body.visitId}-${suffix}.json`;
     const result = await locked(workspaceId, `reader/${guideId}/${body.visitId}`, async () => {
       const view = await read(store, viewKey);
       const complete = await read(store, completeKey);
-      if (body.kind === "complete" && !view) throw new ApiFailure(409, "view_required", "Open the guide before marking it complete.");
-      const duplicate = body.kind === "view" ? view !== null : complete !== null;
-      if (!duplicate) await write(store, body.kind === "view" ? viewKey : completeKey, {
-        kind: body.kind, guideId, visitId: body.visitId, at: new Date().toISOString(),
+      if (kind !== "view" && !view) throw new ApiFailure(409, "view_required", "Open the guide before recording progress.");
+      const previous = kind === "view" ? view : kind === "complete" ? complete : await read(store, eventKey);
+      const duplicate = previous !== null;
+      // Reach and completion are once per anonymous tab session. A reader
+      // may revise a rating without adding another response to the report.
+      if (!duplicate || kind === "feedback") await write(store, eventKey, {
+        kind, guideId, visitId: body.visitId, at: new Date().toISOString(), stepCount: steps.length,
+        ...(stepIndex !== undefined ? { stepIndex, stepTitle: String(steps[Number(stepIndex) - 1]?.title ?? "") } : {}),
+        ...(kind === "feedback" ? { rating: body.rating } : {}),
+        ...(queryHash ? { queryHash, queryLength: Array.from(query).length, resultCount } : {}),
       });
-      return { recorded: true, duplicate, completed: body.kind === "complete" || complete !== null };
+      return { recorded: true, duplicate, completed: kind === "complete" || complete !== null };
     });
     res.json(result);
   }));

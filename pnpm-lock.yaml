@@ -705,9 +705,18 @@ importers:
       '@workspace/zipy':
         specifier: workspace:*
         version: link:../lib/zipy
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
       pg:
         specifier: ^8.16.3
         version: 8.23.0
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       tsx:
         specifier: 'catalog:'
         version: 4.23.13

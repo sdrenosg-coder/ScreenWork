@@ -12,4 +12,8 @@ export type RecordReaderProgressBodyKind = typeof RecordReaderProgressBodyKind[k
 export const RecordReaderProgressBodyKind = {
   view: 'view',
   complete: 'complete',
+  'step-view': 'step-view',
+  'step-complete': 'step-complete',
+  search: 'search',
+  feedback: 'feedback',
 } as const;

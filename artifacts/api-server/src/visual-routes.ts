@@ -3,6 +3,8 @@ import sharp from "sharp";
 import type { Express } from "express";
 import { getJob, enqueueJob } from "@workspace/zipy/jobs/queue";
 import { getMedia } from "@workspace/zipy/storage/mediaStore";
+import { runOcr } from "@workspace/zipy/ingest/ocr";
+import { detectPii } from "@workspace/zipy/images/piiDetect";
 import { validatePublicUrlSyntax } from "@workspace/zipy/jobs/sourceReader";
 import { PERMISSIONS } from "@workspace/zipy/web/rbac/permissions";
 import { ApiFailure, endpoint, workspace, guide, objectBody, locked, read, write, saveVersion } from "./saas-routes";
@@ -55,6 +57,31 @@ export function registerVisualRoutes(app: Express) {
         return job;
       });
       res.json({ jobId: queued.jobId, message: "Read-only public browser capture queued. No login, form submission or workflow execution is performed." }); return;
+    }
+    if (body.action === "detect-pii") {
+      if (typeof body.sourceJobId !== "string") throw new ApiFailure(400, "invalid_input", "Select a private image source.");
+      const loaded = await source(store, workspaceId, guideId, body.sourceJobId);
+      const input = await getMedia(workspaceId, loaded.sourceId);
+      // Use exactly the same orientation and dimensions as the editor and
+      // renderer, so detected boxes do not shift when a reviewer saves them.
+      const image = await sharp(input, { limitInputPixels: 64_000_000 }).rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true }).png().toBuffer();
+      const metadata = await sharp(image).metadata(), width = metadata.width!, height = metadata.height!;
+      const ocr = await runOcr(image, { engine: "tesseract", timeoutMs: 20000 });
+      const detection = await detectPii({
+        imageBytes: image, viewport: { width, height }, deviceScaleFactor: 1, ocrRegions: ocr.regions,
+      }, { keepMatchedText: false });
+      const marks = detection.detections.slice(0, 30).map(item => {
+        const x = Math.max(0, item.bbox.x - 6), y = Math.max(0, item.bbox.y - 6);
+        return { kind: "redact", x: x / width, y: y / height,
+          w: (Math.min(width, item.bbox.x + item.bbox.width + 6) - x) / width,
+          h: (Math.min(height, item.bbox.y + item.bbox.height + 6) - y) / height,
+          category: item.category, confidence: item.confidence };
+      });
+      await appendActivity(workspaceId, session.userId, "guide.pii_scanned", guideId, `Local OCR suggested ${detection.detectionCount} sensitive regions; no image or sensitive text was saved in the scan result`);
+      res.json({ sourceJobId: body.sourceJobId, marks, detectionCount: detection.detectionCount,
+        truncated: detection.detectionCount > 30, engine: "local-ocr-patterns",
+        message: "These are automatic suggestions, not a guarantee that all personal information was found. Review the original and masks before saving; names, faces and unusual formats may need manual redaction." });
+      return;
     }
     if (body.action !== "annotate" || typeof body.sourceJobId !== "string" || typeof body.stepId !== "string" || !Array.isArray(body.marks) || body.marks.length > 30 || typeof body.altText !== "string" || !body.altText.trim() || body.altText.length > 1500) throw new ApiFailure(400, "invalid_input", "Select a source and saved step, supply alt text, and at most 30 valid annotations.");
     const loaded = await source(store, workspaceId, guideId, body.sourceJobId);

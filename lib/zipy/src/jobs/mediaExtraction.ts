@@ -6,7 +6,10 @@ import path from "node:path";
 import { unzipSync, strFromU8 } from "fflate";
 const run = promisify(execFile);
 function decode(value: string) {
-  return value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+  return value.replace(/&#(x[0-9a-f]+|\d+);/gi, (_, entity: string) => {
+    const code = entity[0].toLowerCase() === "x" ? parseInt(entity.slice(1), 16) : Number(entity);
+    return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : "\ufffd";
+  }).replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
 }
 export function officeText(bytes: Buffer, extension: string): string {
   let total = 0, count = 0;
@@ -27,7 +30,7 @@ export function officeText(bytes: Buffer, extension: string): string {
     const xml = strFromU8(files[name]);
     const content = extension === "xlsx"
       ? [...xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)].map(row => [...row[1].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g)].map(cell => {
-        const value = cell[2].match(/<v>([\s\S]*?)<\/v>/)?.[1] ?? cell[2].match(/<t\b[^>]*>([\s\S]*?)<\/t>/)?.[1] ?? "";
+        const value = cell[2].match(/<v>([\s\S]*?)<\/v>/)?.[1] ?? [...cell[2].matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map(match => match[1]).join("");
         return decode(/\bt="s"/.test(cell[1]) ? shared[Number(value)] ?? "" : value);
       }).join("\t")).join("\n")
       : [...xml.matchAll(/<(?:w:|a:)?t\b[^>]*>([\s\S]*?)<\/(?:w:|a:)?t>/g)].map(match => decode(match[1])).join("\n");
@@ -44,17 +47,23 @@ export async function binaryText(bytes: Buffer, extension: string, signal: Abort
       const output = path.join(directory, "text.txt");
       await run("pdftotext", ["-layout", "-enc", "UTF-8", input, output], { signal, timeout: 30_000, maxBuffer: 1_000_000 });
       const extracted = await readFile(output, "utf8");
-      if (extracted.trim()) return { text: extracted };
       const info = await run("pdfinfo", [input], { signal, timeout: 15000, maxBuffer: 100000 });
       const pages = Number(info.stdout.match(/^Pages:\s+(\d+)/m)?.[1]);
-      if (!Number.isInteger(pages) || pages < 1 || pages > 3) throw new Error("Scanned PDFs are limited to three pages per source. Split larger scanned documents before uploading.");
+      if (!Number.isInteger(pages) || pages < 1 || pages > 100) throw new Error("PDFs must contain 1–100 pages.");
+      // pdftotext separates pages with form feeds. Inspect every page, not
+      // just whether the document contains *any* searchable text: a mixed
+      // document can otherwise silently lose its scanned pages.
+      const pageTexts = extracted.split("\f").slice(0, pages);
+      const scanned = Array.from({ length: pages }, (_, index) => index + 1)
+        .filter(page => (pageTexts[page - 1] ?? "").replace(/\s/g, "").length < 40);
+      if (scanned.length > 3) throw new Error("PDFs with more than three scanned or low-text pages must be split before uploading. No pages were silently skipped.");
       const images: { at: number; bytes: Buffer }[] = [];
-      for (let page = 1; page <= pages; page++) {
+      for (const page of scanned) {
         const prefix = path.join(directory, `page-${page}`);
         await run("pdftoppm", ["-f", String(page), "-l", String(page), "-singlefile", "-scale-to", "1600", "-jpeg", input, prefix], { signal, timeout: 20000, maxBuffer: 100000 });
         images.push({ at: page, bytes: await readFile(`${prefix}.jpg`) });
       }
-      return { images };
+      return { text: pageTexts.map((content, index) => content.trim() ? `PDF page ${index + 1}:\n${content.trim()}` : "").filter(Boolean).join("\n\n"), images };
     }
     const probe = await run("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", input], { signal, timeout: 15_000, maxBuffer: 100_000 });
     const media = JSON.parse(probe.stdout) as { format?: { duration?: string }; streams?: { codec_type?: string }[] };

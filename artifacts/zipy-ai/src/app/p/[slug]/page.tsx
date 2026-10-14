@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import ReaderEngagement from "../../../components/ReaderEngagement";
+import ReaderEngagement, { ReaderSearch, ReaderStepActions } from "../../../components/ReaderEngagement";
 import PublicBrand from "../../../components/PublicBrand";
 type PublicGuideRecord = {
   readonly slug?: unknown;
@@ -148,6 +148,7 @@ export default function PublicGuidePage({
             </a>
           </p>
         </header>
+        <ReaderSearch slug={params.slug} steps={model.steps} />
 
         {model.introduction !== null && (
           <section style={{ marginBottom: 20 }}>
@@ -174,7 +175,7 @@ export default function PublicGuidePage({
             <h2 style={sectionHeadingStyle}>Steps</h2>
             <ol style={stepListStyle}>
               {model.steps.map((s) => (
-                <li key={s.index} style={stepItemStyle}>
+                <li key={s.index} id={`reader-step-${s.index}`} data-reader-step-index={s.index} style={stepItemStyle}>
                   <div style={stepHeaderStyle}>
                     <span style={stepBadgeStyle}>{s.index}</span>
                     <strong style={{ fontSize: 15 }}>{s.title}</strong>
@@ -202,6 +203,7 @@ export default function PublicGuidePage({
                       </figure>
                     );
                   })()}
+                  <ReaderStepActions slug={params.slug} index={s.index} />
                 </li>
               ))}
             </ol>

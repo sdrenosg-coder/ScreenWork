@@ -129,6 +129,10 @@ interface ContentGapReport extends ReportBase {
   readonly lowRatedSteps: readonly LowRatedStepRow[];
   readonly missingTopics: readonly string[];
   readonly notes: readonly string[];
+  readonly searchCount: number | null;
+  readonly unmatchedSearches: number | null;
+  readonly ratingCount: number | null;
+  readonly averageRating: number | null;
 }
 
 interface ExecutiveReport extends ReportBase {
@@ -635,15 +639,19 @@ function ContentGapReportView({
         items={[
           {
             label: "Unmatched searches",
-            value: String(report.topUnmatchedQueries.length),
+            value: report.unmatchedSearches === null ? "Unavailable" : String(report.unmatchedSearches),
           },
           {
             label: "Low-rated steps",
             value: String(report.lowRatedSteps.length),
           },
           {
-            label: "Distinct missing topics",
-            value: String(report.missingTopics.length),
+            label: "Ratings received",
+            value: report.ratingCount === null ? "Unavailable" : String(report.ratingCount),
+          },
+          {
+            label: "Average rating",
+            value: report.averageRating === null ? "No ratings" : `${report.averageRating.toFixed(1)} / 5`,
           },
         ]}
       />
@@ -956,6 +964,10 @@ function parseReport(value: unknown): AnyReport | null {
       ...base,
       kind: "content-gap",
       topUnmatchedQueries: queries,
+      searchCount: readNullableNum(v, "searchCount"),
+      unmatchedSearches: readNullableNum(v, "unmatchedSearches"),
+      ratingCount: readNullableNum(v, "ratingCount"),
+      averageRating: readNullableNum(v, "averageRating"),
       lowRatedSteps: rated,
       missingTopics: readStringArray(v, "missingTopics"),
       notes: readStringArray(v, "notes"),

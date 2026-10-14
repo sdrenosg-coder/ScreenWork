@@ -7,13 +7,17 @@
     "hello": "tsx ./src/hello.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:zipy": "playwright test --config playwright.config.ts",
+    "test:zipy-media": "ZIPY_LIVE_AI_TESTS=1 playwright test --config playwright.config.ts zipy-media.spec.ts",
     "worker:zipy": "cd ../artifacts/api-server && tsx ../../scripts/src/zipy-worker/index.ts"
   },
   "devDependencies": {
-    "@workspace/zipy": "workspace:*",
     "@playwright/test": "^1.58.2",
-    "pg": "^8.16.3",
     "@types/node": "catalog:",
+    "@workspace/zipy": "workspace:*",
+    "fflate": "^0.8.3",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.16.3",
+    "sharp": "^0.34.5",
     "tsx": "catalog:"
   }
 }

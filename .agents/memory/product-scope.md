@@ -20,3 +20,9 @@ The agreed repairs include the remaining processing, fusion, automation, annotat
 **Why:** The user challenged ending the work while these requested areas remained unfinished.
 
 **How to apply:** Treat these as existing scope, not optional follow-ups. Report real blockers and progress honestly; billing remains disconnected unless the user changes that decision.
+
+Authenticated browser workflows must use the user's own sign-in and require approval before submitting, deleting, or changing data. Do not store passwords.
+
+**Why:** The user selected “Authenticated actions with approval” after being told how sign-in and state-changing actions would be handled.
+
+**How to apply:** Keep these safeguards mandatory when wiring authenticated automation; a generated plan alone is not permission to execute its state-changing steps.
