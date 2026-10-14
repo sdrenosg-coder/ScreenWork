@@ -56,7 +56,7 @@ export async function forWorkspace(workspaceId: string) {
         ...object, key: relative(object.key), contentLength: object.size,
         lastModified: object.lastModified.toISOString(),
       }));
-      return { entries, objects: entries, cursor: result.cursor };
+      return { entries, objects: entries, cursor: result.cursor, nextCursor: result.cursor };
     },
   };
 }

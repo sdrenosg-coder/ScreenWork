@@ -8,13 +8,16 @@ import Branding from "./app/settings/branding/page";
 import GuideEdit from "./app/guides/[id]/edit/page";
 import WorkflowReview from "./app/workflows/[id]/review/page";
 import PublicGuide from "./app/p/[slug]/page";
+import Login from "./app/login-page";
+import Signup from "./app/signup-page";
+import Features from "./app/features/page";
 import { ErrorBoundary } from "./components/error-boundary";
 
 function Pages() {
   const [location] = useLocation();
   useEffect(() => {
     const title = location.startsWith("/dashboard") || location === "/" ? "Dashboard"
-      : location.startsWith("/admin") ? "Administration"
+      : location.startsWith("/login") ? "Sign in" : location.startsWith("/signup") ? "Create account" : location.startsWith("/features") ? "Feature inventory" : location.startsWith("/admin") ? "Administration"
       : location.startsWith("/analytics") ? "Analytics"
       : location.startsWith("/settings/branding") ? "Branding"
       : location.includes("/edit") ? "Guide editor"
@@ -27,6 +30,9 @@ function Pages() {
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/login" component={Login} />
+          <Route path="/signup" component={Signup} />
+          <Route path="/features" component={Features} />
           <Route path="/admin" component={Admin} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/settings/branding" component={Branding} />

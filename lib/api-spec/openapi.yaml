@@ -11,6 +11,347 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /session:
+    get:
+      operationId: getSession
+      summary: Read the authenticated active workspace
+      responses:
+        "200":
+          description: Active session
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [userId, workspaceId, role]
+                properties:
+                  userId: { type: string }
+                  workspaceId: { type: string }
+                  role: { type: string }
+        "401":
+          description: Not signed in
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the current session and clear its cookie
+      responses:
+        "204":
+          description: Signed out
+  /guides/{id}:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+    get:
+      operationId: getGuide
+      summary: Read a guide in the active workspace
+      responses:
+        "200":
+          description: Guide document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideResponse" }
+        "404": { description: Guide not in the active workspace }
+    put:
+      operationId: saveGuide
+      summary: Save steps as a new revision with optimistic conflict protection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, steps]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                steps:
+                  type: array
+                  maxItems: 500
+                  items: { $ref: "#/components/schemas/GuideStep" }
+      responses:
+        "200":
+          description: Saved guide
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideResponse" }
+        "409": { description: Another revision was saved first }
+  /guides/{id}/publish:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+    post:
+      operationId: publishGuide
+      summary: Publish an immutable saved revision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Public snapshot created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [slug, guide, message]
+                properties:
+                  slug: { type: string }
+                  guide: { $ref: "#/components/schemas/GuideDocument" }
+                  message: { type: string }
+        "409": { description: Saved revision changed }
+  /guides/{id}/unpublish:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+    post:
+      operationId: unpublishGuide
+      summary: Revoke public access while retaining all private revisions
+      responses:
+        "200": { description: Public access revoked }
+  /guides/{id}/download:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+      - name: format
+        in: query
+        schema: { type: string, enum: [markdown, json], default: markdown }
+    get:
+      operationId: downloadGuide
+      summary: Download the saved guide
+      responses:
+        "200":
+          description: Guide attachment
+          content:
+            text/markdown:
+              schema: { type: string }
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideDocument" }
+  /guides/{id}/versions:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+    get:
+      operationId: getGuideVersions
+      summary: List saved revisions of the active workspace's guide
+      responses:
+        "200":
+          description: Version history
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [guideId, workspaceId, current, versions, message, notes]
+                properties:
+                  guideId: { type: string }
+                  workspaceId: { type: string }
+                  current: { type: integer }
+                  versions:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  message: { type: string }
+                  notes: { type: array, items: { type: string } }
+  /guides/{id}/versions/{version}/restore:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+      - name: version
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    post:
+      operationId: restoreGuideVersion
+      summary: Restore an older revision without overwriting a concurrent save
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: New revision containing the restored steps
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "409": { description: Another revision was saved first }
+  /branding/theme:
+    get:
+      operationId: getBrandingTheme
+      summary: Load saved branding for the active workspace
+      responses:
+        "200":
+          description: Saved branding and its optimistic version
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+    put:
+      operationId: saveBrandingTheme
+      summary: Validate and save workspace branding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              required: [expectedVersion, enabled]
+              properties:
+                expectedVersion: { type: integer, minimum: 0 }
+                enabled: { type: boolean }
+                brandName: { type: [string, "null"] }
+                legalFooterText: { type: [string, "null"] }
+                tokenOverrides: { type: [object, "null"], additionalProperties: true }
+                fontInput: { type: object, additionalProperties: true }
+                logos: { type: array, items: { type: object, additionalProperties: true } }
+                customCss: { type: "null" }
+      responses:
+        "200":
+          description: Saved branding
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "409": { description: Another session saved a newer theme }
+  /analytics/events:
+    get:
+      operationId: getWorkspaceReport
+      summary: Read reports derived from this workspace's guides and anonymous reader sessions
+      parameters:
+        - name: kind
+          in: query
+          schema: { type: string, enum: [usage, performance, content-gap, executive], default: usage }
+        - name: window
+          in: query
+          schema: { type: integer, enum: [7, 30, 90], default: 30 }
+      responses:
+        "200":
+          description: Report with explicit provenance, unavailable metrics and scan limits
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [report, provenance, scan, warnings]
+                properties:
+                  report: { type: object, additionalProperties: true }
+                  provenance: { type: object, additionalProperties: true }
+                  scan: { type: object, additionalProperties: true }
+                  warnings: { type: array, items: { type: string } }
+  /v1/audit:
+    get:
+      operationId: getWorkspaceActivity
+      summary: Read recorded guide and branding activity in the active workspace
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 30 }
+        - name: cursor
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Workspace activity
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                      required: [id, kind, at, summary]
+                      properties:
+                        id: { type: string }
+                        kind: { type: string }
+                        at: { type: string }
+                        summary: { type: string }
+                  pagination: { type: object, additionalProperties: true }
+                  meta: { type: object, additionalProperties: true }
+  /public-guides/{slug}/events:
+    parameters:
+      - $ref: "#/components/parameters/PublicSlug"
+    post:
+      operationId: recordReaderProgress
+      summary: Idempotently record an anonymous guide session or explicit completion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, visitId]
+              properties:
+                kind: { type: string, enum: [view, complete] }
+                visitId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Recorded or already recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recorded, duplicate, completed]
+                properties:
+                  recorded: { type: boolean }
+                  duplicate: { type: boolean }
+                  completed: { type: boolean }
+        "404": { description: Guide is not publicly available }
+        "429": { description: Tracking rate limit reached }
+  /public-guides/{slug}/download:
+    parameters:
+      - $ref: "#/components/parameters/PublicSlug"
+      - name: format
+        in: query
+        schema: { type: string, enum: [markdown, json], default: markdown }
+    get:
+      operationId: downloadPublishedGuide
+      summary: Download only the publicly published snapshot, never the private draft
+      responses:
+        "200":
+          description: Public snapshot attachment
+          content:
+            text/markdown:
+              schema: { type: string }
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "404": { description: Guide is not publicly available }
+  /public-guides/{slug}/theme:
+    parameters:
+      - $ref: "#/components/parameters/PublicSlug"
+    get:
+      operationId: getPublishedGuideTheme
+      summary: Read the public subset of enabled workspace branding
+      responses:
+        "200":
+          description: Public brand name, palette, font picks and footer
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "404": { description: Guide is not publicly available }
+  /public-guides/{slug}/logo:
+    parameters:
+      - $ref: "#/components/parameters/PublicSlug"
+    get:
+      operationId: getPublishedGuideLogo
+      summary: Read the explicitly published raster header logo
+      responses:
+        "200":
+          description: A validated image
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+            image/jpeg:
+              schema: { type: string, format: binary }
+            image/webp:
+              schema: { type: string, format: binary }
+            image/gif:
+              schema: { type: string, format: binary }
+        "404": { description: No public logo is available }
   /healthz:
     get:
       operationId: healthCheck
@@ -25,7 +366,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 components:
+  parameters:
+    PublicSlug:
+      name: slug
+      in: path
+      required: true
+      schema: { type: string, maxLength: 160 }
+    GuideId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
   schemas:
+    GuideResponse:
+      type: object
+      required: [guide, message]
+      properties:
+        guide: { $ref: "#/components/schemas/GuideDocument" }
+        message: { type: string }
+    GuideDocument:
+      type: object
+      additionalProperties: true
+      required: [id, title, version, steps]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        version: { type: integer, minimum: 1 }
+        steps:
+          type: array
+          items: { $ref: "#/components/schemas/GuideStep" }
+    GuideStep:
+      type: object
+      additionalProperties: true
+      required: [id, title, description, value]
+      properties:
+        id: { type: string, maxLength: 200 }
+        index: { type: integer }
+        title: { type: string, maxLength: 20000 }
+        description: { type: string, maxLength: 20000 }
+        value: { type: string, maxLength: 20000 }
+        aiGenerated: { type: boolean }
+        screenshotRef: { type: [string, "null"] }
     HealthStatus:
       type: object
       properties:

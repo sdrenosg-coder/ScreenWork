@@ -48,11 +48,13 @@ import {
   PERMISSIONS,
   assertPermission,
   toAuthzFailure,
-  type SessionLike,
+  type Permission,
 } from "@workspace/zipy/web/rbac/permissions";
 import { loadSession, type SessionRecord } from "@workspace/zipy/web/auth/session";
 import { getConfig } from "@workspace/zipy/web/config";
 import { forWorkspace } from "@workspace/zipy/storage/routeStore";
+import { appendActivity } from "@/workspace-events";
+import { logger } from "@/lib/logger";
 import * as importedContract0 from "@workspace/zipy/templates/library";
 
 import { REF, openApiDocument } from "../openapi";
@@ -147,19 +149,29 @@ async function readJsonOrNull(store: StoreLike, key: string): Promise<unknown | 
  * Enumerate guide records under the workspace prefix. The route prefers a
  * driver-native `list` that returns `{key, contentLength, lastModified}`; when
  * the driver only exposes `listKeys`, we fetch each record to recover the
- * timestamps the list response needs. That fallback is intentionally bounded
- * by the page limit plus a small over-fetch, so it cannot walk the entire
- * prefix for a large workspace.
+ * timestamps the list response needs. Enumerate storage pages before applying
+ * application filters and cursors: storage key order is not creation order.
  */
 async function listGuideKeys(
   store: StoreLike,
-  limit: number,
+  _limit: number,
 ): Promise<readonly StorageEntry[]> {
   const prefix = `${GUIDES_PREFIX}/`;
 
   if (typeof store.list === "function") {
-    const result = await store.list(prefix, { limit });
-    return result.entries;
+    const entries: StorageEntry[] = [];
+    const cursors = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const result = await store.list(prefix, { limit: 250, cursor });
+      entries.push(...result.entries);
+      cursor = result.nextCursor ?? undefined;
+      if (cursor !== undefined) {
+        if (cursors.has(cursor)) throw new Error("Storage returned a repeating pagination cursor.");
+        cursors.add(cursor);
+      }
+    } while (cursor !== undefined);
+    return entries;
   }
 
   if (typeof store.listKeys === "function") {
@@ -245,7 +257,7 @@ interface AuthedContext {
 
 async function authenticate(
   req: Request,
-  permission: string,
+  permission: Permission,
 ): Promise<AuthedContext | HttpResponse> {
   let session: SessionRecord | null;
   try {
@@ -273,7 +285,7 @@ async function authenticate(
   }
 
   try {
-    assertPermission(session as unknown as SessionLike, permission);
+    assertPermission(session, permission);
   } catch (error) {
     const failure = toAuthzFailure(error);
     if (failure !== null) {
@@ -373,6 +385,15 @@ export async function GET(req: Request): Promise<HttpResponse> {
   if (limitOrError instanceof HttpResponse) return limitOrError;
   const limit = limitOrError;
 
+  const offsetRaw = url.searchParams.get("offset") ?? "0";
+  if (!/^\d+$/.test(offsetRaw) || !Number.isSafeInteger(Number(offsetRaw))) {
+    return HttpResponse.json(
+      { error: "validation_error", field: "offset", message: "offset must be a non-negative integer." },
+      { status: 400 },
+    );
+  }
+  const offset = Number(offsetRaw);
+
   const cursorRaw = url.searchParams.get("cursor");
   let cursor: CursorValue | null = null;
   if (cursorRaw !== null && cursorRaw.length > 0) {
@@ -421,8 +442,7 @@ export async function GET(req: Request): Promise<HttpResponse> {
   if (storeOrError instanceof HttpResponse) return storeOrError;
   const store = storeOrError;
 
-  // We fetch one extra record past the page boundary so we can tell whether a
-  // next page exists without a separate count query.
+  // Storage pages must be exhausted before filtering and sorting.
   let entries: readonly StorageEntry[];
   try {
     entries = await listGuideKeys(store, limit + 1);
@@ -470,12 +490,10 @@ export async function GET(req: Request): Promise<HttpResponse> {
     return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
   });
 
-  const afterCursor =
-    cursor === null
-      ? loaded
-      : loaded.filter((g) => isAfterCursor({ createdAt: g.createdAt, id: g.id }, cursor as CursorValue));
-
-  const filtered = afterCursor.filter((g) => {
+  const folderFilter = url.searchParams.get("folderId");
+  const tagFilter = url.searchParams.get("tag");
+  const query = (url.searchParams.get("q") ?? "").trim().toLocaleLowerCase();
+  const filtered = loaded.filter((g) => {
     if (statusFilter !== null) {
       const status = readString(g.record, "status");
       if (status !== statusFilter) return false;
@@ -484,24 +502,38 @@ export async function GET(req: Request): Promise<HttpResponse> {
       const workflowId = readString(g.record, "workflowId");
       if (workflowId !== workflowFilter) return false;
     }
+    if (folderFilter !== null && readString(g.record, "folderId") !== folderFilter) return false;
+    if (tagFilter !== null && (!Array.isArray(g.record["tags"]) || !g.record["tags"].includes(tagFilter))) return false;
+    if (query !== "" && ![
+      readString(g.record, "title") ?? "",
+      readString(g.record, "slug") ?? "",
+      JSON.stringify(g.record["steps"] ?? []),
+    ].join(" ").toLocaleLowerCase().includes(query)) return false;
     return true;
   });
 
-  const page = filtered.slice(0, limit);
-  const hasMore = filtered.length > limit;
+  const afterCursor = cursor === null ? filtered : filtered.filter(
+    (g) => isAfterCursor({ createdAt: g.createdAt, id: g.id }, cursor as CursorValue),
+  );
+  const page = afterCursor.slice(offset, offset + limit);
+  const hasMore = afterCursor.length > offset + limit;
   const last = page[page.length - 1];
   const nextCursor =
     hasMore && last !== undefined
       ? encodeCursor({ createdAt: last.createdAt, id: last.id })
       : null;
 
+  const data = page.map((g) => toGuideDto(g.id, g.record, workspaceId, g.createdAt));
   return HttpResponse.json({
-    guides: page.map((g) => toGuideDto(g.id, g.record, workspaceId, g.createdAt)),
+    data,
+    guides: data,
+    meta: { workspaceId, generatedAt: new Date().toISOString() },
     pagination: {
+      offset,
       limit,
       hasMore,
       nextCursor,
-      total: null,
+      total: filtered.length,
     },
     openapi: REF.guideList,
     schemaVersion: openApiDocument.info.version,
@@ -720,6 +752,7 @@ export async function POST(req: Request): Promise<HttpResponse> {
     );
   }
 
+  await appendActivity(workspaceId, session.userId, "guide.created", guideId, `Created ${validated.title}`).catch(error => logger.warn({ err: error }, "Guide created but activity recording failed"));
   return HttpResponse.json(
     {
       guide: toGuideDto(guideId, record as Readonly<Record<string, unknown>>, workspaceId, nowIso),
@@ -777,7 +810,14 @@ function toGuideDto(
     workflowId: workflowId ?? "",
     title: readString(record, "title") ?? "Untitled guide",
     status,
-    slug: readString(record, "slug"),
+    slug: readString(record, "slug") ?? "",
+    visibility: readString(record, "visibility") ?? "private",
+    tags: Array.isArray(record["tags"]) ? record["tags"] : [],
+    folderId: readString(record, "folderId"),
+    screenshotCount: readNumber(record, "screenshotCount") ?? 0,
+    publishedAt: readString(record, "publishedAt"),
+    language: readString(record, "language"),
+    archived: status === "archived",
     aiGenerated: record["aiGenerated"] === true,
     sourceCount,
     stepCount: readNumber(record, "stepCount") ?? 0,

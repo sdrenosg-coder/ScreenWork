@@ -114,7 +114,7 @@ interface FormState {
 }
 
 interface FormErrors {
-  readonly [key: string]: string | undefined;
+  [key: string]: string | undefined;
 }
 
 const UUID_PATTERN =

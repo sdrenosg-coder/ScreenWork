@@ -1,1 +1,4 @@
 - [Browser testing fallback](browser-testing.md) — use local Playwright and the platform Chromium when managed browser testing is unavailable.
+- [Generated API compatibility](codegen-compatibility.md) — avoid duplicate inferred/model input exports; browser clients may need DOM iterable typings.
+- [SaaS product scope](product-scope.md) — Zipy must function as SaaS, not merely display imported screens; make feature readiness explicit.
+- [Branding semantics](branding-semantics.md) — saving branding applies the theme; white-labelling separately removes Zipy platform branding.

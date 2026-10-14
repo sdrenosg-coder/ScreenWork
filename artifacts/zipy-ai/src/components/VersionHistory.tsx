@@ -251,7 +251,8 @@ export default function VersionHistory({
           `/api/guides/${encodeURIComponent(guideId)}/versions/${version}/restore`,
           {
             method: "POST",
-            headers: { accept: "application/json" },
+            headers: { accept: "application/json", "content-type": "application/json" },
+            body: JSON.stringify({ expectedVersion: state.kind === "ready" ? state.data.current : null }),
           },
         );
         const json: unknown = await res.json().catch(() => null);
@@ -308,7 +309,7 @@ export default function VersionHistory({
         setRestoringVersion(null);
       }
     },
-    [guideId, readOnly, onRestored, load],
+    [guideId, readOnly, onRestored, load, state],
   );
 
   /* ------------------------------- render -------------------------------- */

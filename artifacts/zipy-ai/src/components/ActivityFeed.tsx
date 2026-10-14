@@ -1,4 +1,5 @@
 "use client";
+import type { JSX } from "react";
 /**
  * Zipy AI — ActivityFeed component (phase 20, batch 3).
  *

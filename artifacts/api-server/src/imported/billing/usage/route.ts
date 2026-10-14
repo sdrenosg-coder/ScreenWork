@@ -44,7 +44,6 @@ import {
   PERMISSIONS,
   assertPermission,
   toAuthzFailure,
-  type SessionLike,
 } from "@workspace/zipy/web/rbac/permissions";
 import { loadSession, type SessionRecord } from "@workspace/zipy/web/auth/session";
 
@@ -149,7 +148,7 @@ function configGate(): HttpResponse | null {
   return null;
 }
 
-async function requireSessionAndWorkspace(): Promise<
+async function requireSessionAndWorkspace(req: Request): Promise<
   | {
       readonly session: SessionRecord;
       readonly workspaceId: string;
@@ -159,7 +158,7 @@ async function requireSessionAndWorkspace(): Promise<
   let session: SessionRecord | null;
   try {
     session = await loadSession({
-      cookieHeader: undefined,
+      cookieHeader: req.headers.get("cookie"),
       touch: false,
     });
   } catch (error) {
@@ -196,7 +195,7 @@ async function requireSessionAndWorkspace(): Promise<
   }
 
   try {
-    assertPermission(session as unknown as SessionLike, PERMISSIONS.billing_read);
+    assertPermission(session, PERMISSIONS.workspace_billing_read);
   } catch (err) {
     const failure = toAuthzFailure(err);
     if (failure !== null) {
@@ -326,7 +325,7 @@ export async function GET(req: Request): Promise<HttpResponse> {
   const gate = configGate();
   if (gate !== null) return gate;
 
-  const authed = await requireSessionAndWorkspace();
+  const authed = await requireSessionAndWorkspace(req);
   if ("error" in authed) return authed.error;
   const { session, workspaceId } = authed;
 

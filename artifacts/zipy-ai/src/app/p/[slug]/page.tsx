@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
+import ReaderEngagement from "../../../components/ReaderEngagement";
+import PublicBrand from "../../../components/PublicBrand";
 type PublicGuideRecord = {
   readonly slug?: unknown;
   readonly guideId?: unknown;
@@ -61,10 +63,11 @@ export default function PublicGuidePage({
 }) {
   const [result, setResult] = useState<LoadResult | null>(null);
   useEffect(() => {
+    setResult(null);
     const controller = new AbortController();
     setResult(null);
     fetch("/api/public-guides/" + encodeURIComponent(params.slug), { signal: controller.signal })
-      .then(r => r.json()).then(setResult)
+      .then(r => r.json()).then(data => { if (!controller.signal.aborted) setResult(data); })
       .catch(error => { if (!controller.signal.aborted) setResult({ kind: "storage_error", message: error.message }); });
     return () => controller.abort();
   }, [params.slug]);
@@ -119,7 +122,7 @@ export default function PublicGuidePage({
 
   return (
     <main style={pageStyle}>
-      <article>
+      <PublicBrand slug={params.slug}><article>
         <header style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 28, margin: "0 0 6px", fontWeight: 700 }}>
             {model.title}
@@ -135,19 +138,14 @@ export default function PublicGuidePage({
             </p>
           )}
           <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
-            <Link
-              href={`/api/guides/${encodeURIComponent(model.guideId)}/export?format=pdf`}
-              style={{ color: "#1d4ed8", textDecoration: "none" }}
-            >
-              Download as PDF
-            </Link>
+            <button type="button" className="z-btn" onClick={() => window.print()}>Print / Save PDF</button>
             {" · "}
-            <Link
-              href={`/api/guides/${encodeURIComponent(model.guideId)}/export?format=markdown`}
+            <a
+              href={`/api/public-guides/${encodeURIComponent(params.slug)}/download?format=markdown`}
               style={{ color: "#1d4ed8", textDecoration: "none" }}
             >
               Markdown
-            </Link>
+            </a>
           </p>
         </header>
 
@@ -252,7 +250,8 @@ export default function PublicGuidePage({
             provenance. Review before relying on it.
           </footer>
         )}
-      </article>
+        <ReaderEngagement key={params.slug} slug={params.slug} />
+      </article></PublicBrand>
     </main>
   );
 }

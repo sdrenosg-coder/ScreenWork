@@ -1,4 +1,5 @@
 "use client";
+import type { JSX } from "react";
 
 /**
  * Zipy AI — Analytics & reporting dashboard (phase 23, batch 2).

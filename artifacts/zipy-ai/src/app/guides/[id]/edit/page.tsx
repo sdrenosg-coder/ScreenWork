@@ -40,6 +40,7 @@ import {
   type CSSProperties,
 } from "react";
 import { Link } from "wouter";
+import GuideSharing from "../../../../components/GuideSharing";
 import StepEditor, {
   type EditableStep,
   type StepEditorChange,
@@ -401,9 +402,7 @@ export default function GuideEditPage({
           Dashboard
         </Link>
         <span aria-hidden="true">›</span>
-        <Link href={`/guides/${encodeURIComponent(guideId)}`} style={linkStyle}>
-          Guide
-        </Link>
+        <span>Guide</span>
         <span aria-hidden="true">›</span>
         <span style={{ color: "#0f172a", fontWeight: 500 }}>Edit</span>
       </nav>
@@ -462,6 +461,7 @@ export default function GuideEditPage({
       {historyOpen && (
         <section style={{ marginBottom: 16 }}>
           <VersionHistory
+            key={state.kind === "ready" || state.kind === "conflict" ? state.response?.guide.version : 0}
             guideId={guideId}
             onRestored={onRestored}
             onBusyChange={setRestoring}
@@ -480,6 +480,7 @@ export default function GuideEditPage({
 
       {state.kind === "ready" && (
         <>
+          <GuideSharing guideId={guideId} currentVersion={state.response.guide.version} dirty={canSave()} />
           <StepEditor
             guideId={guideId}
             steps={steps}

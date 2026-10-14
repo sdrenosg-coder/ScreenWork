@@ -70,6 +70,9 @@ export function registerZipyRoutes(app: Express) {
   register(app, "/api/v1/guides", route17);
   register(app, "/api/v1/workflows", route18);
   register(app, "/api/workflows/:id/synthesize", route19);
-  app.get("/api/public-guides/:slug", async (req, res) => { res.json(await loadGuide(req.params.slug)); });
+  app.get("/api/public-guides/:slug", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await loadGuide(req.params.slug));
+  });
   app.use("/api", (_req, res) => { res.status(404).json({ error: "not_found", message: "This endpoint was not included in the imported app." }); });
 }

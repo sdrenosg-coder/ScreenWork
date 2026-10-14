@@ -68,6 +68,7 @@ import {
   type CSSProperties,
 } from "react";
 import { Link } from "wouter";
+import { NewGuideButton } from "../../components/NewGuide";
 
 /* -------------------------------------------------------------------------- */
 /* Wire types                                                                  */
@@ -97,6 +98,7 @@ export interface GuideSummary {
   readonly screenshotCount: number;
   readonly language: string | null;
   readonly archived: boolean;
+  readonly workflowId?: string;
 }
 
 export interface GuidesPage {
@@ -195,6 +197,11 @@ interface ApiError {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// The feature inventory identifies these as unfinished. Do not make failing
+// background requests until the imported billing/activity contracts are wired.
+const WORKSPACE_METRICS_READY = false;
+const WORKSPACE_ACTIVITY_READY = true;
 
 const GUIDE_STATUSES: readonly GuideStatus[] = [
   "draft",
@@ -420,12 +427,12 @@ export default function DashboardPage() {
   }, [loadGuides]);
 
   useEffect(() => {
-    void loadAudit();
+    if (WORKSPACE_ACTIVITY_READY) void loadAudit();
     return () => auditAbortRef.current?.abort();
   }, [loadAudit]);
 
   useEffect(() => {
-    void loadUsage();
+    if (WORKSPACE_METRICS_READY) void loadUsage();
     return () => usageAbortRef.current?.abort();
   }, [loadUsage]);
 
@@ -484,24 +491,24 @@ export default function DashboardPage() {
   /* -------------------------------- render ------------------------------- */
 
   return (
-    <main style={pageStyle}>
+    <div style={{ ...pageStyle, padding: 0, margin: 0, maxWidth: "none" }}>
       <header style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700 }}>
-          Workspace dashboard
+        <h1 style={{ margin: "0 0 8px", fontSize: 34, fontWeight: 700 }}>
+          Guides
         </h1>
         <p style={{ margin: 0, color: "#475569", fontSize: 13 }}>
-          Guides, lifecycle, activity and plan usage for the active workspace.
+          Your team's guides, in one place. Create, refine and share what you know.
         </p>
       </header>
 
-      <UsageCard
+      {usage.kind === "ready" && <UsageCard
         state={usage}
         onRefresh={() => {
           void loadUsage();
         }}
-      />
+      />}
 
-      <div style={twoColumnStyle}>
+      <div className="z-dashboard-grid" style={twoColumnStyle}>
         <section
           aria-labelledby="zipy-dashboard-guides"
           style={cardStyle}
@@ -524,9 +531,7 @@ export default function DashboardPage() {
                       : ""}
               </p>
             </div>
-            <Link href="/guides/new" style={primaryLinkStyle}>
-              New guide
-            </Link>
+            <NewGuideButton />
           </header>
 
           <FilterBar
@@ -561,7 +566,7 @@ export default function DashboardPage() {
                   No guides match the current filters.
                 </p>
               ) : (
-                <ul style={listStyle}>
+                <ul style={listStyle} data-testid="list-guides">
                   {guides.data.guides.map((g) => (
                     <GuideRow key={g.id} guide={g} />
                   ))}
@@ -618,7 +623,7 @@ export default function DashboardPage() {
             )}
           </section>
 
-          <section
+          {audit.kind === "ready" && <section
             aria-labelledby="zipy-dashboard-activity"
             style={cardStyle}
           >
@@ -635,16 +640,11 @@ export default function DashboardPage() {
                   void loadAudit();
                 }}
                 style={linkButtonStyle}
-                disabled={audit.kind === "loading"}
               >
-                {audit.kind === "loading" ? "Loading…" : "Refresh"}
+                Refresh
               </button>
             </header>
-            {audit.kind === "idle" || audit.kind === "loading" ? (
-              <p style={mutedStyle}>Loading activity…</p>
-            ) : audit.kind === "error" ? (
-              <ErrorBlock error={audit.error} />
-            ) : audit.data.entries.length === 0 ? (
+            {audit.data.entries.length === 0 ? (
               <p style={mutedStyle}>No activity recorded yet.</p>
             ) : (
               <ul style={listStyle}>
@@ -656,10 +656,14 @@ export default function DashboardPage() {
                 ))}
               </ul>
             )}
-          </section>
+          </section>}
         </div>
       </div>
-    </main>
+      <p className="z-note" style={{ marginTop: 20 }}>
+        Guide editing, version history, public sharing and workspace activity are available. AI generation and paid billing are not connected.{" "}
+        <Link href="/features">See all features and their status</Link>
+      </p>
+    </div>
   );
 }
 
@@ -997,7 +1001,7 @@ function StatusSummary({
 
 function GuideRow({ guide }: { readonly guide: GuideSummary }) {
   return (
-    <li style={guideRowStyle}>
+    <li style={guideRowStyle} data-testid={`row-guide-${guide.id}`}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
         <Link
           href={`/guides/${encodeURIComponent(guide.id)}/edit`}
@@ -1030,16 +1034,10 @@ function GuideRow({ guide }: { readonly guide: GuideSummary }) {
       </div>
       <div style={guideActionsStyle}>
         <Link
-          href={`/workflows/${encodeURIComponent(guide.id)}/review`}
+          href={`/workflows/${encodeURIComponent(guide.workflowId ?? guide.id)}/review`}
           style={linkStyle}
         >
           Review
-        </Link>
-        <Link
-          href={`/guides/${encodeURIComponent(guide.id)}/export`}
-          style={linkStyle}
-        >
-          Export
         </Link>
         {guide.slug !== "" && (
           <Link href={`/p/${encodeURIComponent(guide.slug)}`} style={linkStyle}>
@@ -1080,12 +1078,10 @@ function Meta({
 
 function ErrorBlock({ error }: { readonly error: ApiError }) {
   return (
-    <div role="alert" style={errorStyle}>
-      <strong style={{ display: "block", marginBottom: 4 }}>{error.code}</strong>
-      <span>{error.message}</span>
-      {error.field !== undefined && (
-        <span style={{ marginLeft: 6 }}>(field: {error.field})</span>
-      )}
+    <div role="status" style={{ ...errorStyle, background: "#f8f0dd", borderColor: "#e3d2a6", color: "#5b4f33" }} data-testid="status-unavailable">
+      <strong style={{ display: "block", marginBottom: 4 }}>Temporarily unavailable</strong>
+      <span>This feature is not fully set up on the server yet. Use Retry or Refresh to try again; see the Feature inventory for status.</span>
+      <details style={{ marginTop: 6, fontSize: 11 }}><summary>Technical detail</summary>{error.code}: {error.message}</details>
     </div>
   );
 }
@@ -1143,6 +1139,7 @@ function parseGuide(v: unknown): GuideSummary | null {
         ? Math.trunc(r["screenshotCount"])
         : 0,
     language: typeof r["language"] === "string" ? r["language"] : null,
+    workflowId: typeof r["workflowId"] === "string" ? r["workflowId"] : undefined,
     archived: r["archived"] === true || r["status"] === "archived",
   };
 }
@@ -1491,17 +1488,16 @@ const pageStyle: CSSProperties = {
   maxWidth: 1200,
   margin: "0 auto",
   padding: "24px 16px 48px",
-  fontFamily:
-    "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
-  color: "#0f172a",
-  background: "#f8fafc",
+  fontFamily: "inherit",
+  color: "var(--ink)",
+  background: "transparent",
 };
 
 const cardStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 10,
-  padding: 16,
-  background: "#ffffff",
+  border: "1px solid var(--line)",
+  borderRadius: 14,
+  padding: 20,
+  background: "var(--card)",
 };
 
 const twoColumnStyle: CSSProperties = {

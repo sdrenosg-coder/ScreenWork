@@ -7,6 +7,7 @@ type PublicGuideRecord = {
   readonly access?: unknown;
   readonly publishedAt?: unknown;
   readonly passwordHash?: unknown;
+  readonly snapshotKey?: unknown;
 };
 
 type Access = "public" | "private" | "password";
@@ -145,7 +146,12 @@ export async function loadGuide(slug: string): Promise<LoadResult> {
 
   let draftBytes: Buffer | null;
   try {
-    draftBytes = await store.get(guideDraftKey(guideId));
+    const snapshotKey = record.snapshotKey;
+    if (snapshotKey !== undefined && (typeof snapshotKey !== "string" ||
+        !new RegExp(`^guides/${guideId}/published/[1-9][0-9]*\\.json$`).test(snapshotKey))) {
+      return { kind: "not_found" };
+    }
+    draftBytes = await store.get(typeof snapshotKey === "string" ? snapshotKey : guideDraftKey(guideId));
   } catch (error) {
     const m = error instanceof Error ? error.message : String(error);
     if (/not.?found|enoent|no such key|404/i.test(m)) return { kind: "not_found" };

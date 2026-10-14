@@ -1,4 +1,5 @@
 "use client";
+import type { JSX } from "react";
 
 /**
  * Zipy AI — Branding & white-label settings (phase 25, batch 1).
@@ -42,6 +43,7 @@ import {
   useCallback,
   useMemo,
   useRef,
+  useEffect,
   useState,
   type CSSProperties,
   type ChangeEvent,
@@ -335,6 +337,22 @@ type SaveState =
 export default function BrandingSettingsPage(): JSX.Element {
   const [draft, setDraft] = useState<Draft>(initialDraft);
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
+  const [version, setVersion] = useState(0);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const abort = new AbortController();
+    fetch("/api/branding/theme", { signal: abort.signal })
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message ?? "Saved branding could not load.");
+        if (!abort.signal.aborted) {
+          setDraft(draftFromInput(data.input));
+          setVersion(data.version);
+          setLoading(false);
+        }
+      }).catch(error => { if (!abort.signal.aborted) { setSave({ kind: "error", message: `${error.message} Reload before saving changes.` }); setLoading(false); } });
+    return () => abort.abort();
+  }, []);
   const issues = useMemo(() => validateDraft(draft), [draft]);
   const issuesByField = useMemo(() => {
     const m = new Map<string, DraftIssue[]>();
@@ -386,7 +404,7 @@ export default function BrandingSettingsPage(): JSX.Element {
     }
     setSave({ kind: "saving" });
     try {
-      const body = buildSavePayload(draft);
+      const body = { ...buildSavePayload(draft), expectedVersion: version };
       const res = await fetch("/api/branding/theme", {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -402,6 +420,7 @@ export default function BrandingSettingsPage(): JSX.Element {
         return;
       }
       const notes = extractNotes(json);
+      setVersion((json as { version: number }).version);
       setSave({ kind: "saved", at: new Date().toISOString(), notes });
     } catch (err) {
       setSave({
@@ -412,7 +431,9 @@ export default function BrandingSettingsPage(): JSX.Element {
             : "The save request failed before a response was received.",
       });
     }
-  }, [draft, issues.length]);
+  }, [draft, issues.length, version]);
+
+  if (loading) return <main><h1>Branding</h1><p role="status">Loading saved branding…</p></main>;
 
   return (
     <main style={pageStyle}>
@@ -444,6 +465,7 @@ export default function BrandingSettingsPage(): JSX.Element {
           <input
             type="checkbox"
             checked={draft.enabled}
+            title="Saved branding applies to public guides. This option also removes Zipy's header and footer."
             onChange={(e) => update({ enabled: e.target.checked })}
           />
           <span style={toggleLabelStyle}>
@@ -532,12 +554,14 @@ export default function BrandingSettingsPage(): JSX.Element {
         </p>
         <Field label="Stylesheet" issues={issuesByField.get("customCss")}>
           <textarea
-            value={draft.customCss}
+          value={draft.customCss}
+          disabled
+          title="Custom CSS is not enabled on the public reader."
             onChange={(e) => update({ customCss: e.target.value })}
             rows={10}
             style={{ ...textareaStyle, fontFamily: MONO_FONT, fontSize: 12 }}
             spellCheck={false}
-            placeholder={"/* e.g. tighten step headings */\n.step-title { letter-spacing: -0.01em; }"}
+            placeholder="Custom CSS is not enabled on the public reader."
           />
         </Field>
       </Section>
@@ -605,6 +629,46 @@ export default function BrandingSettingsPage(): JSX.Element {
 /* -------------------------------------------------------------------------- */
 /* Save payload                                                                */
 /* -------------------------------------------------------------------------- */
+
+function draftFromInput(value: unknown): Draft {
+  const draft = initialDraft();
+  if (value === null || value === undefined) return draft;
+  if (typeof value !== "object" || Array.isArray(value)) throw new Error("Saved branding has an invalid format.");
+  const input = value as Record<string, unknown>;
+  const overrides = (input.tokenOverrides as { colors?: Partial<ColorDraft> } | null)?.colors ?? {};
+  const fonts = { ...draft.fonts };
+  const picks = (input.fontInput as { picks?: Record<string, unknown>[] } | null)?.picks ?? [];
+  for (const pick of picks) {
+    if (!(FONT_ROLES as readonly unknown[]).includes(pick.role)) continue;
+    const role = pick.role as FontRole;
+    const license = pick.license as { kind?: FontPickDraft["licenseKind"]; embeddingAllowed?: boolean } | null;
+    fonts[role] = {
+      ...fonts[role], family: typeof pick.family === "string" ? pick.family : "",
+      weight: pick.weight == null ? fonts[role].weight : String(pick.weight),
+      fallbackCsv: Array.isArray(pick.fallbackFamilies) ? pick.fallbackFamilies.join(", ") : "",
+      fileNote: typeof pick.fileNote === "string" ? pick.fileNote : "",
+      licenseKind: license?.kind ?? "unknown", embeddingAllowed: license?.embeddingAllowed === true,
+    };
+  }
+  const logos: Partial<Record<LogoSurface, LogoDraft>> = {};
+  for (const pick of Array.isArray(input.logos) ? input.logos as Record<string, unknown>[] : []) {
+    if (!(LOGO_SURFACES as readonly unknown[]).includes(pick.surface)) continue;
+    const logo = pick.logo as Record<string, unknown>;
+    logos[pick.surface as LogoSurface] = {
+      id: String(logo.id ?? ""), storageKey: String(logo.storageKey ?? ""),
+      mimeType: logo.mimeType as LogoDraft["mimeType"], fileName: String(logo.fileName ?? ""),
+      byteSize: Number(logo.byteSize ?? 0),
+      widthPx: logo.widthPx == null ? "" : String(logo.widthPx),
+      heightPx: logo.heightPx == null ? "" : String(logo.heightPx),
+      altText: String(logo.altText ?? ""), keepPlatformFallback: pick.keepPlatformFallback === true,
+    };
+  }
+  return {
+    ...draft, enabled: input.enabled === true, brandName: String(input.brandName ?? ""),
+    legalFooterText: String(input.legalFooterText ?? ""),
+    colors: { ...draft.colors, ...overrides }, fonts, logos, customCss: "",
+  };
+}
 
 function buildSavePayload(draft: Draft): Record<string, unknown> {
   const tokenOverrides: Record<string, unknown> = {};

@@ -43,7 +43,7 @@ import {
   PERMISSIONS,
   assertPermission,
   toAuthzFailure,
-  type SessionLike,
+  type Permission,
 } from "@workspace/zipy/web/rbac/permissions";
 import { loadSession, type SessionRecord } from "@workspace/zipy/web/auth/session";
 import { getConfig } from "@workspace/zipy/web/config";
@@ -126,13 +126,24 @@ async function readJsonOrNull(store: StoreLike, key: string): Promise<unknown | 
 
 async function listWorkflowKeys(
   store: StoreLike,
-  limit: number,
+  _limit: number,
 ): Promise<readonly StorageEntry[]> {
   const prefix = `${WORKFLOWS_PREFIX}/`;
 
   if (typeof store.list === "function") {
-    const result = await store.list(prefix, { limit });
-    return result.entries;
+    const entries: StorageEntry[] = [];
+    const cursors = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const result = await store.list(prefix, { limit: 250, cursor });
+      entries.push(...result.entries);
+      cursor = result.nextCursor ?? undefined;
+      if (cursor !== undefined) {
+        if (cursors.has(cursor)) throw new Error("Storage returned a repeating pagination cursor.");
+        cursors.add(cursor);
+      }
+    } while (cursor !== undefined);
+    return entries;
   }
 
   if (typeof store.listKeys === "function") {
@@ -213,7 +224,7 @@ interface AuthedContext {
 
 async function authenticate(
   req: Request,
-  permission: string,
+  permission: Permission,
 ): Promise<AuthedContext | HttpResponse> {
   let session: SessionRecord | null;
   try {
@@ -241,7 +252,7 @@ async function authenticate(
   }
 
   try {
-    assertPermission(session as unknown as SessionLike, permission);
+    assertPermission(session, permission);
   } catch (error) {
     const failure = toAuthzFailure(error);
     if (failure !== null) {
@@ -433,14 +444,7 @@ export async function GET(req: Request): Promise<HttpResponse> {
     return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
   });
 
-  const afterCursor =
-    cursor === null
-      ? loaded
-      : loaded.filter((w) =>
-          isAfterCursor({ createdAt: w.createdAt, id: w.id }, cursor as CursorValue),
-        );
-
-  const filtered = afterCursor.filter((w) => {
+  const filtered = loaded.filter((w) => {
     if (statusFilter !== null) {
       const status = readString(w.record, "status");
       if (status !== statusFilter) return false;
@@ -452,8 +456,11 @@ export async function GET(req: Request): Promise<HttpResponse> {
     return true;
   });
 
-  const page = filtered.slice(0, limit);
-  const hasMore = filtered.length > limit;
+  const afterCursor = cursor === null ? filtered : filtered.filter(
+    (w) => isAfterCursor({ createdAt: w.createdAt, id: w.id }, cursor as CursorValue),
+  );
+  const page = afterCursor.slice(0, limit);
+  const hasMore = afterCursor.length > limit;
   const last = page[page.length - 1];
   const nextCursor =
     hasMore && last !== undefined
@@ -466,7 +473,7 @@ export async function GET(req: Request): Promise<HttpResponse> {
       limit,
       hasMore,
       nextCursor,
-      total: null,
+      total: filtered.length,
     },
     openapi: REF.workflowList,
     schemaVersion: openApiDocument.info.version,
