@@ -562,7 +562,7 @@ async function runCloudOcr(
         "content-type": "application/octet-stream",
         ...(token !== null ? { authorization: `Bearer ${token}` } : {}),
       },
-      body,
+      body: new Uint8Array(body),
       signal: ac.signal,
     });
     if (!res.ok) {

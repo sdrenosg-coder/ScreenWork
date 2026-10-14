@@ -14,3 +14,9 @@ Long asynchronous jobs can outlast a managed browser step's 45-second wait ceili
 **Why:** A real AI job completed successfully while the browser lost its notebook during the wait. Resubmitting would have spent credits again.
 
 **How to apply:** Recover from persisted server job status and draft metadata after a browser reset. Never send another model request solely because a browser wait timed out.
+
+Prefer `/repl/tools/bin/chromium` before searching the Nix store for a browser.
+
+**Why:** The Nix store can contain many obsolete Chromium installations. Choosing the first executable selected Chromium 98, which could not launch under current Playwright.
+
+**How to apply:** Verify the platform executable exists. If it is unavailable, choose a version-compatible browser deliberately, not the first directory matching “chromium”.

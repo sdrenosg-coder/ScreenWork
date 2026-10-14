@@ -52,7 +52,9 @@ import type {
   RestoreGuideVersionBody,
   SaveBrandingTheme200,
   SaveBrandingThemeBody,
-  SaveGuideBody
+  SaveGuideBody,
+  SuiteCommand,
+  SuiteDocument
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -81,6 +83,468 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetGuideVisualsUrl = (id: string,) => {
+
+
+
+
+  return `/api/guides/${id}/visuals`
+}
+
+export const getGuideVisuals = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<SuiteDocument> => {
+
+  return customFetch<SuiteDocument>(getGetGuideVisualsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGuideVisualsQueryKey = (id: string,) => {
+    return [
+    `/api/guides/${id}/visuals`
+    ] as const;
+    }
+
+
+export const getGetGuideVisualsQueryOptions = <TData = Awaited<ReturnType<typeof getGuideVisuals>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGuideVisuals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGuideVisualsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGuideVisuals>>> = ({ signal }) => getGuideVisuals(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGuideVisuals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGuideVisualsQueryResult = NonNullable<Awaited<ReturnType<typeof getGuideVisuals>>>
+export type GetGuideVisualsQueryError = ErrorType<unknown>
+
+
+
+export function useGetGuideVisuals<TData = Awaited<ReturnType<typeof getGuideVisuals>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGuideVisuals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGuideVisualsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getChangeGuideVisualsUrl = (id: string,) => {
+
+
+
+
+  return `/api/guides/${id}/visuals`
+}
+
+export const changeGuideVisuals = async (id: string,
+    suiteCommand: SuiteCommand, options?: Parameters<typeof customFetch>[1]): Promise<SuiteDocument> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SuiteDocument>(getChangeGuideVisualsUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(suiteCommand)
+  }
+);}
+
+
+
+
+
+export const getChangeGuideVisualsMutationKey = () => ['changeGuideVisuals'] as const;
+
+export const getChangeGuideVisualsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeGuideVisuals>>, TError,ChangeGuideVisualsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeGuideVisuals>>, TError,ChangeGuideVisualsMutationVariables, TContext> => {
+
+const mutationKey = getChangeGuideVisualsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeGuideVisuals>>, ChangeGuideVisualsMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changeGuideVisuals(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeGuideVisualsMutationResult = NonNullable<Awaited<ReturnType<typeof changeGuideVisuals>>>
+    export type ChangeGuideVisualsMutationBody = BodyType<SuiteCommand>
+    export type ChangeGuideVisualsMutationError = ErrorType<unknown>
+    export type ChangeGuideVisualsMutationVariables = {id: string;data: BodyType<SuiteCommand>}
+
+    export const useChangeGuideVisuals = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeGuideVisuals>>, TError,ChangeGuideVisualsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeGuideVisuals>>,
+        TError,
+        ChangeGuideVisualsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeGuideVisualsMutationOptions(options));
+    }
+
+export const getGetWorkspaceSuiteUrl = (section: 'templates' | 'team' | 'integrations' | 'governance',) => {
+
+
+
+
+  return `/api/suite/${section}`
+}
+
+export const getWorkspaceSuite = async (section: 'templates' | 'team' | 'integrations' | 'governance', options?: Parameters<typeof customFetch>[1]): Promise<SuiteDocument> => {
+
+  return customFetch<SuiteDocument>(getGetWorkspaceSuiteUrl(section),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkspaceSuiteQueryKey = (section: 'templates' | 'team' | 'integrations' | 'governance',) => {
+    return [
+    `/api/suite/${section}`
+    ] as const;
+    }
+
+
+export const getGetWorkspaceSuiteQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspaceSuite>>, TError = ErrorType<unknown>>(section: 'templates' | 'team' | 'integrations' | 'governance', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceSuite>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkspaceSuiteQueryKey(section);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkspaceSuite>>> = ({ signal }) => getWorkspaceSuite(section, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: section !== null && section !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceSuite>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorkspaceSuiteQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceSuite>>>
+export type GetWorkspaceSuiteQueryError = ErrorType<unknown>
+
+
+
+export function useGetWorkspaceSuite<TData = Awaited<ReturnType<typeof getWorkspaceSuite>>, TError = ErrorType<unknown>>(
+ section: 'templates' | 'team' | 'integrations' | 'governance', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceSuite>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorkspaceSuiteQueryOptions(section,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getChangeWorkspaceSuiteUrl = (section: 'templates' | 'team' | 'integrations' | 'governance',) => {
+
+
+
+
+  return `/api/suite/${section}`
+}
+
+export const changeWorkspaceSuite = async (section: 'templates' | 'team' | 'integrations' | 'governance',
+    suiteCommand: SuiteCommand, options?: Parameters<typeof customFetch>[1]): Promise<SuiteDocument> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SuiteDocument>(getChangeWorkspaceSuiteUrl(section),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(suiteCommand)
+  }
+);}
+
+
+
+
+
+export const getChangeWorkspaceSuiteMutationKey = () => ['changeWorkspaceSuite'] as const;
+
+export const getChangeWorkspaceSuiteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeWorkspaceSuite>>, TError,ChangeWorkspaceSuiteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeWorkspaceSuite>>, TError,ChangeWorkspaceSuiteMutationVariables, TContext> => {
+
+const mutationKey = getChangeWorkspaceSuiteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeWorkspaceSuite>>, ChangeWorkspaceSuiteMutationVariables> = (props) => {
+          const {section,data} = props ?? {};
+
+          return  changeWorkspaceSuite(section,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeWorkspaceSuiteMutationResult = NonNullable<Awaited<ReturnType<typeof changeWorkspaceSuite>>>
+    export type ChangeWorkspaceSuiteMutationBody = BodyType<SuiteCommand>
+    export type ChangeWorkspaceSuiteMutationError = ErrorType<unknown>
+    export type ChangeWorkspaceSuiteMutationVariables = {section: 'templates' | 'team' | 'integrations' | 'governance';data: BodyType<SuiteCommand>}
+
+    export const useChangeWorkspaceSuite = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeWorkspaceSuite>>, TError,ChangeWorkspaceSuiteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeWorkspaceSuite>>,
+        TError,
+        ChangeWorkspaceSuiteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeWorkspaceSuiteMutationOptions(options));
+    }
+
+export const getGetGuideDiscussionUrl = (id: string,) => {
+
+
+
+
+  return `/api/guides/${id}/discussion`
+}
+
+export const getGuideDiscussion = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<SuiteDocument> => {
+
+  return customFetch<SuiteDocument>(getGetGuideDiscussionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGuideDiscussionQueryKey = (id: string,) => {
+    return [
+    `/api/guides/${id}/discussion`
+    ] as const;
+    }
+
+
+export const getGetGuideDiscussionQueryOptions = <TData = Awaited<ReturnType<typeof getGuideDiscussion>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGuideDiscussion>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGuideDiscussionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGuideDiscussion>>> = ({ signal }) => getGuideDiscussion(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGuideDiscussion>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGuideDiscussionQueryResult = NonNullable<Awaited<ReturnType<typeof getGuideDiscussion>>>
+export type GetGuideDiscussionQueryError = ErrorType<unknown>
+
+
+
+export function useGetGuideDiscussion<TData = Awaited<ReturnType<typeof getGuideDiscussion>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGuideDiscussion>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGuideDiscussionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getChangeGuideDiscussionUrl = (id: string,) => {
+
+
+
+
+  return `/api/guides/${id}/discussion`
+}
+
+export const changeGuideDiscussion = async (id: string,
+    suiteCommand: SuiteCommand, options?: Parameters<typeof customFetch>[1]): Promise<SuiteDocument> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SuiteDocument>(getChangeGuideDiscussionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(suiteCommand)
+  }
+);}
+
+
+
+
+
+export const getChangeGuideDiscussionMutationKey = () => ['changeGuideDiscussion'] as const;
+
+export const getChangeGuideDiscussionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeGuideDiscussion>>, TError,ChangeGuideDiscussionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeGuideDiscussion>>, TError,ChangeGuideDiscussionMutationVariables, TContext> => {
+
+const mutationKey = getChangeGuideDiscussionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeGuideDiscussion>>, ChangeGuideDiscussionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  changeGuideDiscussion(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeGuideDiscussionMutationResult = NonNullable<Awaited<ReturnType<typeof changeGuideDiscussion>>>
+    export type ChangeGuideDiscussionMutationBody = BodyType<SuiteCommand>
+    export type ChangeGuideDiscussionMutationError = ErrorType<unknown>
+    export type ChangeGuideDiscussionMutationVariables = {id: string;data: BodyType<SuiteCommand>}
+
+    export const useChangeGuideDiscussion = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeGuideDiscussion>>, TError,ChangeGuideDiscussionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeGuideDiscussion>>,
+        TError,
+        ChangeGuideDiscussionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getChangeGuideDiscussionMutationOptions(options));
+    }
 
 export const getCreateGuideDraftJobUrl = (id: string,) => {
 

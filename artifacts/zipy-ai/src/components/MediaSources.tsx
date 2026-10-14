@@ -48,11 +48,11 @@ export default function MediaSources({ guideId, selected, onSelected, disabled }
   return <section className="z-ms" aria-label="Source files">
     <h3>Source files</h3>
     <ul className="z-ms-help">
-      <li>PDF: searchable text only. Scanned pages are not read (no OCR or layout analysis).</li>
+      <li>PDF: searchable text extraction; scanned PDFs up to 3 pages use AI visual extraction.</li>
       <li>DOCX, PPTX, XLSX: modern Office files, text extracted.</li>
       <li>PNG, JPEG, WebP: up to 8 MB per image.</li>
-      <li>MP3, WAV, M4A, OGG audio and MP4, WebM, MOV video: speech transcription only, up to 3 minutes. Video visuals are not interpreted.</li>
-      <li>Max 16 MB per file, 20 sources per guide. Images and audio use Replit AI credits; failed jobs are not retried automatically.</li>
+      <li>Audio: speech transcription, up to 3 minutes. Video: speech plus three timestamped visual samples, not every frame.</li>
+      <li>Max 16 MB per file, 20 sources per guide. Images, scanned PDFs, audio and video can use AI credits; video may make two model calls. Failed jobs are not retried automatically.</li>
     </ul>
     <div className="z-ms-bar">
       <label htmlFor="ms-file" style={{ fontSize: 13, fontWeight: 600 }}>Choose one file</label>

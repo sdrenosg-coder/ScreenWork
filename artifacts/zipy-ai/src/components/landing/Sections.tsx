@@ -15,7 +15,7 @@ export function HowItWorks() {
 
 export function Readiness() {
   const by = (k: string) => GROUPS.filter((g) => g.status === k);
-  const cols: [string, string, string][] = [["available", "Core available", "Core parts are usable today with a real account. Advanced parts of these groups are still unfinished."], ["connecting", "Being connected", "Designed and demonstrated here; not yet running for you."], ["notconnected", "Not connected", "No payments or paid plans are active."]];
+  const cols: [string, string, string][] = [["available", "Core available", "Core parts are usable today with a real account. Advanced parts of these groups are still unfinished."], ["connecting", "Being connected", "Partly working; advanced portions are not finished. Examples on this page are illustrative, not production results."], ["notconnected", "Not connected", "No payments or paid plans are active."]];
   return (
     <section className="zl-ready" aria-labelledby="zl-ready-h">
       <span className="z-welcome-eyebrow">Honest status</span>
@@ -34,7 +34,7 @@ export function FinalCta() {
   return (
     <section className="zl-cta">
       <h2>Start with a guide you write yourself.</h2>
-      <p>Core manual guides, version history, publishing, basic exports, branding and reader analytics are available now; advanced parts of those areas are not finished. The rest is being connected, and the status page tells you exactly where.</p>
+      <p>Guides, version history, AI drafts with human review, document and media sources, publishing and exports, templates, discussion, team invites, webhooks and analytics work now; advanced parts of several are not finished. Billing is not connected. The rest is being connected, and the status page tells you exactly where.</p>
       <div className="z-welcome-actions">
         <Link href="/signup" className="z-btn z-btn-primary">Create your workspace <ArrowUpRight size={18} aria-hidden /></Link>
         <Link href="/login" className="z-btn">Sign in</Link>

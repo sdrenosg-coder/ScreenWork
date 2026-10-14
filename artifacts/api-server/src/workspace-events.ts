@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { forWorkspace } from "@workspace/zipy/storage/routeStore";
+import { enqueueWorkspaceHooks } from "@workspace/zipy/jobs/webhookDelivery";
 
 export async function appendActivity(workspaceId: string, actorId: string, kind: string, resourceId: string, summary: string) {
   const store = await forWorkspace(workspaceId);
@@ -11,4 +12,5 @@ export async function appendActivity(workspaceId: string, actorId: string, kind:
     resourceId, metadata: {},
   };
   await store.put(`activity/${at.slice(0, 10)}/${id}.json`, Buffer.from(JSON.stringify(entry)), { contentType: "application/json" });
+  await enqueueWorkspaceHooks(workspaceId, { id, kind, at, data: { resourceId, summary } });
 }

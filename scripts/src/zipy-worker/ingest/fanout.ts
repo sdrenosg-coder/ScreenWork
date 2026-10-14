@@ -52,7 +52,14 @@ import {
   type ResolvedSourcePriority,
   type SourceKind,
 } from "@workspace/zipy/ingest/sourcePriority";
-import { buildUnifiedRep, type UnifiedRep } from "@workspace/zipy/ingest/unifiedRep";
+// Fanout records structural ingest summaries. Content fusion consumes each
+// resolver's raw result separately; a summary is not a CanonicalItem.
+interface UnifiedRep {
+  workspaceId: string | null;
+  priority: readonly string[];
+  sources: readonly { kind: SourceKind; status: "ok" | "error"; label: string | null; summary: FanoutSourceSummary | null; error: FanoutSourceError | null }[];
+  nowIso: string;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Errors                                                                      */
@@ -284,7 +291,7 @@ export async function runFanout(options: FanoutOptions): Promise<FanoutResult> {
   // Each source runs on its own AbortController so a timeout kills just that
   // source. `Promise.all` is not used to avoid the whole request aborting on
   // the first failure — `Promise.allSettled` records every outcome.
-  const tasks = sources.map((input, index) =>
+  const tasks = (sources as readonly FanoutSourceInput[]).map((input, index) =>
     runOneSource({
       input,
       index,
@@ -359,7 +366,7 @@ export async function runFanout(options: FanoutOptions): Promise<FanoutResult> {
     );
   }
 
-  const unified = buildUnifiedRep({
+  const unified: UnifiedRep = {
     workspaceId: options.workspaceId ?? null,
     priority: priority.order,
     sources: ordered.map((r) => ({
@@ -370,7 +377,7 @@ export async function runFanout(options: FanoutOptions): Promise<FanoutResult> {
       error: r.error,
     })),
     nowIso: new Date().toISOString(),
-  });
+  };
 
   return {
     sources: ordered,
@@ -495,7 +502,7 @@ function classifyResolverError(
   if (err instanceof Error) {
     const code =
       typeof (err as { code?: unknown }).code === "string"
-        ? (err as { code: string }).code
+        ? String((err as Error & { code?: unknown }).code)
         : err.name && err.name !== "Error"
           ? err.name
           : "resolver-threw";

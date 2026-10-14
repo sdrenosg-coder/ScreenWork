@@ -8,6 +8,78 @@
 import * as zod from 'zod';
 
 
+export const GetGuideVisualsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetGuideVisualsResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "message": zod.string().optional()
+})
+
+
+export const ChangeGuideVisualsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ChangeGuideVisualsBody = zod.object({
+  "action": zod.string()
+})
+
+export const ChangeGuideVisualsResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "message": zod.string().optional()
+})
+
+
+export const GetWorkspaceSuiteParams = zod.object({
+  "section": zod.enum(['templates', 'team', 'integrations', 'governance'])
+})
+
+export const GetWorkspaceSuiteResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "message": zod.string().optional()
+})
+
+
+export const ChangeWorkspaceSuiteParams = zod.object({
+  "section": zod.enum(['templates', 'team', 'integrations', 'governance'])
+})
+
+export const ChangeWorkspaceSuiteBody = zod.object({
+  "action": zod.string()
+})
+
+export const ChangeWorkspaceSuiteResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "message": zod.string().optional()
+})
+
+
+export const GetGuideDiscussionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetGuideDiscussionResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "message": zod.string().optional()
+})
+
+
+export const ChangeGuideDiscussionParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ChangeGuideDiscussionBody = zod.object({
+  "action": zod.string()
+})
+
+export const ChangeGuideDiscussionResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "message": zod.string().optional()
+})
+
+
 /**
  * @summary Queue a source-grounded AI draft without modifying the saved guide
  */

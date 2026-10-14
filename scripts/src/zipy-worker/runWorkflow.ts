@@ -49,12 +49,12 @@
  */
 
 import {
-  launchBrowserSession,
+  launchSession,
   closeSession,
   type BrowserSession,
   type PlaywrightPage,
 } from "@workspace/zipy/automation/browser";
-import { getConfig } from "@/lib/config";
+import { getConfig } from "@workspace/zipy/web/config";
 import {
   captureViewport,
   captureElement,
@@ -375,9 +375,8 @@ export async function runWorkflow(
   const config = getConfig();
   let session: BrowserSession | null = null;
   try {
-    session = await launchBrowserSession({
+    session = await launchSession({
       headless: config.browser.headless,
-      ignoreHTTPSErrors: plan.ignoreHTTPSErrors ?? false,
     });
   } catch (error) {
     return abortedResult({

@@ -11,6 +11,81 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /guides/{id}/visuals:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+    get:
+      operationId: getGuideVisuals
+      responses:
+        "200":
+          description: Source images and saved guide steps
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuiteDocument" }
+    post:
+      operationId: changeGuideVisuals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SuiteCommand" }
+      responses:
+        "200":
+          description: Capture queued or annotated step saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuiteDocument" }
+  /suite/{section}:
+    parameters:
+      - name: section
+        in: path
+        required: true
+        schema: { type: string, enum: [templates, team, integrations, governance] }
+    get:
+      operationId: getWorkspaceSuite
+      responses:
+        "200":
+          description: Workspace scoped product data
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuiteDocument" }
+    post:
+      operationId: changeWorkspaceSuite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SuiteCommand" }
+      responses:
+        "200":
+          description: Validated workspace operation completed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuiteDocument" }
+  /guides/{id}/discussion:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+    get:
+      operationId: getGuideDiscussion
+      responses:
+        "200":
+          description: Guide discussion and source images
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuiteDocument" }
+    post:
+      operationId: changeGuideDiscussion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SuiteCommand" }
+      responses:
+        "200":
+          description: Discussion operation completed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuiteDocument" }
   /guides/{id}/draft-jobs:
     parameters:
       - $ref: "#/components/parameters/GuideId"
@@ -547,6 +622,20 @@ components:
       required: true
       schema: { type: string, format: uuid }
   schemas:
+    SuiteDocument:
+      type: object
+      additionalProperties: true
+      properties:
+        items:
+          type: array
+          items: { type: object, additionalProperties: true }
+        message: { type: string }
+    SuiteCommand:
+      type: object
+      required: [action]
+      additionalProperties: true
+      properties:
+        action: { type: string }
     GuideSourceUpload:
       type: object
       required: [file]

@@ -7,6 +7,7 @@ interface Draft {
   steps: { title: string; description: string }[];
   tips: string[]; faq: { question: string; answer: string }[];
   glossary: { term: string; definition: string }[];
+  sourceConflicts?: string[];
   provenance: { provider: string; model: string; requiresHumanReview: boolean };
 }
 interface Job { jobId: string; status: string; error: string | null; draft: Draft | null; expectedVersion?: number }
@@ -23,6 +24,7 @@ export default function DraftProcessing({ guideId, version, dirty }: { guideId: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [needsReview, setNeedsReview] = useState(false);
+  const [savedConflicts, setSavedConflicts] = useState<string[]>([]);
   const revision = `${guideId}:${version}`;
   const currentRevision = useRef(revision);
   currentRevision.current = revision;
@@ -46,7 +48,8 @@ export default function DraftProcessing({ guideId, version, dirty }: { guideId: 
       if (abort.signal.aborted) return;
       if (data.guide.version !== version) throw new Error("The saved guide changed. Reload it before reviewing.");
       setLoadedReviewRevision(`${guideId}:${version}`);
-      setNeedsReview(Boolean(data.guide.aiDraftJobId) && data.guide.reviewedVersion !== version);
+      setNeedsReview((Boolean(data.guide.aiDraftJobId) || data.guide.needsReview === true) && data.guide.reviewedVersion !== version);
+      setSavedConflicts(Array.isArray(data.guide.sourceConflicts) ? data.guide.sourceConflicts.filter((value: unknown): value is string => typeof value === "string") : []);
       if (data.guide.activeDraftJobId || data.guide.aiDraftJobId) setJob({ jobId: data.guide.activeDraftJobId ?? data.guide.aiDraftJobId, status: "pending", error: null, draft: null });
     }).catch(error => { if (!abort.signal.aborted) setError(error.message); });
     return () => abort.abort();
@@ -129,6 +132,7 @@ export default function DraftProcessing({ guideId, version, dirty }: { guideId: 
     {error && <p className="z-err" role="alert">{error}</p>}
     {job?.draft && <div style={{ marginTop: 24 }} data-testid="draft-preview">
       <span className="z-pill">AI-generated draft</span><h3>{job.draft.title}</h3><p>{job.draft.introduction}</p>
+      {Boolean(job.draft.sourceConflicts?.length) && <div role="note" className="z-note"><strong>Sources disagree—review required</strong><ul>{job.draft.sourceConflicts?.map((conflict, index) => <li key={index}>{conflict}</li>)}</ul></div>}
       <ol>{job.draft.steps.map((step, index) => <li key={index} style={{ marginBottom: 12 }}><strong>{step.title}</strong><p>{step.description}</p></li>)}</ol>
       {job.draft.tips?.length > 0 && <details><summary>Tips and warnings</summary><ul>{job.draft.tips.map((tip, i) => <li key={i}>{tip}</li>)}</ul></details>}
       {job.draft.faq?.length > 0 && <details><summary>FAQ</summary>{job.draft.faq.map((item, i) => <div key={i}><strong>{item.question}</strong><p>{item.answer}</p></div>)}</details>}
@@ -137,7 +141,8 @@ export default function DraftProcessing({ guideId, version, dirty }: { guideId: 
       <button type="button" className="z-btn z-btn-primary" data-testid="button-apply-draft" disabled={dirty || busy || job.expectedVersion !== version} onClick={() => void apply()}>{job.expectedVersion !== version ? "Draft belongs to an earlier revision" : "Apply as a new saved revision"}</button>
     </div>}
     {approvedRevision === revision && <p className="z-note" role="status">Revision {version} is approved. You can now publish this saved revision.</p>}
-    {needsReview && loadedReviewRevision === revision && <div id="ai-review" className="z-note" style={{ marginTop: 20 }}><h3>Review this AI-generated revision</h3><p>Inspect the saved steps below. Publication is blocked until the current revision is approved.</p>
+    {needsReview && loadedReviewRevision === revision && <div id="ai-review" className="z-note" style={{ marginTop: 20 }}><h3>Review this generated or annotated revision</h3><p>Inspect saved steps, source conflicts and screenshot redactions. Publication is blocked until this exact revision is approved.</p>
+      {savedConflicts.length > 0 && <div><strong>Source conflicts to resolve in your review</strong><ul>{savedConflicts.map((conflict, index) => <li key={index}>{conflict}</li>)}</ul></div>}
       <label style={{ display: "flex", alignItems: "start", gap: 8 }}><input type="checkbox" checked={confirmed} onChange={event => setConfirmedRevision(event.target.checked ? revision : null)} data-testid="checkbox-review-draft" /> I reviewed the saved instructions for accuracy and safety.</label>
       <button className="z-btn" data-testid="button-approve-draft" disabled={!confirmed || dirty || busy} onClick={() => void approve()}>Approve revision {version}</button>
     </div>}

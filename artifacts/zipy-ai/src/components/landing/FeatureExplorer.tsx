@@ -14,7 +14,7 @@ export default function FeatureExplorer() {
     <section className="zl-explorer" id="explore" aria-labelledby="zl-explore-h">
       <span className="z-welcome-eyebrow">All 26 workflow groups</span>
       <h2 id="zl-explore-h">Pick a workflow. See what it produces.</h2>
-      <p className="zl-lead">Every example below is illustrative. Nothing runs on a live AI service, and none of it is your workspace data.</p>
+      <p className="zl-lead">These examples are illustrative, not your workspace data. They do not run AI jobs; sign in to process your own sources and generate a real draft.</p>
       <div className="zl-ex-grid">
         <ul className="zl-list" aria-label="Workflow groups">
           {GROUPS.map((x, n) => (

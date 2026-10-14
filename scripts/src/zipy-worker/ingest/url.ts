@@ -609,7 +609,7 @@ export async function ingestUrl(
     const fingerprint = await safeAsync(
       async () =>
         (page !== null
-          ? await page.evaluate(DOM_FINGERPRINT_SCRIPT)
+          ? await page.evaluate<DomElementRecord[]>(new Function(`return (${DOM_FINGERPRINT_SCRIPT})`) as () => DomElementRecord[])
           : []) as DomElementRecord[],
       [] as DomElementRecord[],
     );

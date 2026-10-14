@@ -316,7 +316,8 @@ function nowIso(): string {
 
 /* ---------------------------------- URL ---------------------------------- */
 
-import type { A11yTree, A11yNode } from "@workspace/zipy/ingest/a11y";
+import type { A11yNode } from "@workspace/zipy/ingest/a11y";
+type A11yTree = { readonly roots: readonly A11yNode[] };
 import type { IndexedElement } from "@workspace/zipy/ingest/elementIndex";
 
 export interface UrlProjectionInput {
@@ -339,27 +340,27 @@ export function projectUrlIngest(input: UrlProjectionInput): SourceProjection {
   const items: CanonicalItem[] = [];
   const sourceLabel = input.sourceLabel ?? input.url;
 
-  const elementByRef = new Map<string, IndexedElement>();
-  for (const el of input.elements) elementByRef.set(el.ref, el);
+  const remaining = [...input.elements];
 
   const a11yNodes = flattenA11y(input.a11y);
   for (let i = 0; i < a11yNodes.length; i += 1) {
     const node = a11yNodes[i];
-    const ref = typeof node.stableRef === "string" ? node.stableRef : null;
     const name = typeof node.name === "string" ? node.name.trim() : "";
     const role = typeof node.role === "string" ? node.role : "";
+    const match = remaining.findIndex(el => el.role === role && el.name.trim() === name && (!node.domPath || el.domPath === node.domPath));
+    const el = match >= 0 ? remaining.splice(match, 1)[0] : null;
+    const ref = el?.ref ?? null;
 
-    if (ref !== null && elementByRef.has(ref)) {
-      const el = elementByRef.get(ref) as IndexedElement;
+    if (ref !== null && el) {
       const itemId = stableId([input.sourceRef, "url-element", ref]);
       items.push({
         id: itemId,
         modality: "url-element",
         content: {
           kind: "ui-element",
-          elementType: el.elementType ?? el.tagName ?? "unknown",
-          label: name.length > 0 ? name : (el.text ?? ""),
-          selector: el.selector ?? null,
+          elementType: el.role,
+          label: name.length > 0 ? name : el.name,
+          selector: null,
           role: role.length > 0 ? role : null,
         },
         provenance: {
@@ -375,8 +376,8 @@ export function projectUrlIngest(input: UrlProjectionInput): SourceProjection {
           ocrConfidence: null,
           vlmLabel: null,
           extra: {
-            tagName: el.tagName ?? null,
-            isInteractive: el.isInteractive ?? true,
+            domPath: el.domPath,
+            isInteractive: true,
           },
         },
         ordinalInSource: i,

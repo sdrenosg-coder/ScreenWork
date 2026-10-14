@@ -212,7 +212,7 @@ export function registerSaasRoutes(app: Express) {
     const body = objectBody(req);
     const result = await locked(workspaceId, id, async () => {
       const current = await guide(store, id);
-      if (current.aiDraftJobId && current.reviewedVersion !== current.version) throw new ApiFailure(409, "review_required", "Review and approve this AI-generated revision before publishing.");
+      if ((current.aiDraftJobId || current.needsReview === true) && current.reviewedVersion !== current.version) throw new ApiFailure(409, "review_required", "Review and approve this generated or annotated revision before publishing.");
       if (current.version !== body.expectedVersion) throw new ApiFailure(409, "version_conflict", "The saved guide changed. Reload before publishing.", { currentVersion: current.version });
       if (!current.steps.length) throw new ApiFailure(400, "validation_error", "Add and save at least one step before publishing.");
       const slug = `guide-${id}`;

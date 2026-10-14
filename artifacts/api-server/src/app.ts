@@ -10,6 +10,8 @@ import { registerBrandingRoutes } from "./branding-routes";
 import { registerReaderRoutes } from "./reader-routes";
 import { registerDraftRoutes } from "./draft-routes";
 import { registerMediaRoutes } from "./media-routes";
+import { registerSuiteRoutes } from "./suite-routes";
+import { registerVisualRoutes } from "./visual-routes";
 
 const app: Express = express();
 
@@ -45,6 +47,8 @@ registerWorkspaceReports(app);
 registerBrandingRoutes(app);
 registerReaderRoutes(app);
 registerDraftRoutes(app);
+registerSuiteRoutes(app);
+registerVisualRoutes(app);
 registerZipyRoutes(app);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

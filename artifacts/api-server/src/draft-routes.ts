@@ -26,13 +26,13 @@ export function registerDraftRoutes(app: Express) {
       const texts: string[] = [];
       for (const sourceId of sourceIds) {
         const sourceJob = await getJob(workspaceId, sourceId);
-        if (!sourceJob || sourceJob.payload.guideId !== guideId || !sourceJob.kind.startsWith("ingest:")) throw new ApiFailure(404, "not_found", "Source does not belong to this guide.");
+        if (!sourceJob || sourceJob.payload.guideId !== guideId || (!sourceJob.kind.startsWith("ingest:") && sourceJob.kind !== "capture:screenshot")) throw new ApiFailure(404, "not_found", "Source does not belong to this guide.");
         if (sourceJob.status !== "succeeded") throw new ApiFailure(409, "source_not_ready", "Wait for every selected source to finish processing.");
         const key = sourceJob.result?.storageKey;
         if (typeof key !== "string") throw new ApiFailure(409, "source_not_ready", "Source text is unavailable.");
         const processed = await read(store, key);
         if (typeof processed?.text !== "string") throw new ApiFailure(409, "source_not_ready", "Source text is unavailable.");
-        texts.push(`SOURCE ${texts.length + 1}: ${String(sourceJob.payload.filename)}\n${processed.text}`);
+        texts.push(`SOURCE ${sourceId}: ${String(sourceJob.payload.filename)}\n${processed.text}`);
       }
       if (body.sourceKind !== "text") throw new ApiFailure(400, "validation_error", "Combine processed files with text notes, not a URL field.");
       sourceValue = [typeof body.source === "string" ? body.source : "", ...texts].join("\n\n");
@@ -82,7 +82,7 @@ export function registerDraftRoutes(app: Express) {
       const current = await guide(store, guideId);
       if (body.expectedVersion !== current.version || current.version !== job.payload.expectedVersion) throw new ApiFailure(409, "version_conflict", "The guide changed while generation was running. Your existing changes have been preserved.");
       const steps = normalizeSteps(draft.steps, workspaceId);
-      return saveVersion(store, current, { title: draft.title, introduction: draft.introduction, prerequisites: draft.prerequisites, tips: draft.tips, faq: draft.faq, glossary: draft.glossary, steps, aiDraftJobId: job.id, activeDraftJobId: null, aiProvenance: draft.provenance, reviewedVersion: null }, session.userId);
+      return saveVersion(store, current, { title: draft.title, introduction: draft.introduction, prerequisites: draft.prerequisites, tips: draft.tips, faq: draft.faq, glossary: draft.glossary, sourceConflicts: draft.sourceConflicts ?? [], steps, aiDraftJobId: job.id, activeDraftJobId: null, aiProvenance: draft.provenance, reviewedVersion: null }, session.userId);
     });
     await appendActivity(workspaceId, session.userId, "guide.ai_draft_applied", guideId, "Applied an AI draft awaiting human review").catch(error => req.log.warn({ err: error }, "Draft applied but activity recording failed"));
     res.json({ guide: saved });
@@ -95,7 +95,7 @@ export function registerDraftRoutes(app: Express) {
     const reviewed = await locked(workspaceId, guideId, async () => {
       const current = await guide(store, guideId);
       if (body.expectedVersion !== current.version) throw new ApiFailure(409, "version_conflict", "The guide changed. Review its current revision.");
-      const updated = { ...current, reviewedVersion: current.version, reviewedBy: session.userId, reviewedAt: new Date().toISOString() };
+      const updated = { ...current, needsReview: false, reviewedVersion: current.version, reviewedBy: session.userId, reviewedAt: new Date().toISOString() };
       await write(store, `guides/${guideId}.json`, updated);
       return updated;
     });

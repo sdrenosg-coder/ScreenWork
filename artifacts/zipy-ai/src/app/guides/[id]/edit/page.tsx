@@ -46,6 +46,8 @@ import StepEditor, {
   type EditableStep,
   type StepEditorChange,
 } from "../../../../components/StepEditor";
+import GuideDiscussion from "../../../../components/GuideDiscussion";
+import VisualTools from "../../../../components/VisualTools";
 import VersionHistory from "../../../../components/VersionHistory";
 
 /* -------------------------------------------------------------------------- */
@@ -655,6 +657,8 @@ export default function GuideEditPage({
               </button>
             </div>
           </footer>
+          <VisualTools guideId={guideId} />
+          <GuideDiscussion guideId={guideId} />
         </>
       )}
 

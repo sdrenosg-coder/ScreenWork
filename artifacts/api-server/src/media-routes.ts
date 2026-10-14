@@ -48,7 +48,7 @@ export function registerMediaRoutes(app: Express) {
     const ids = Array.isArray(current.sourceJobIds) ? current.sourceJobIds.filter((value): value is string => typeof value === "string").slice(0, 20) : [];
     const sources = await Promise.all(ids.map(async jobId => {
       const job = await getJob(workspaceId, jobId);
-      if (!job || job.payload.guideId !== current.id || !job.kind.startsWith("ingest:")) return null;
+      if (!job || job.payload.guideId !== current.id || (!job.kind.startsWith("ingest:") && job.kind !== "capture:screenshot")) return null;
       const result = job.result as Record<string, unknown> | null;
       const extracted = job.status === "succeeded" && typeof result?.storageKey === "string" ? await read(store, result.storageKey) : null;
       return { jobId, filename: job.payload.filename, kind: job.payload.extension, status: job.status, error: job.last_error ?? null, text: extracted?.text ?? null };

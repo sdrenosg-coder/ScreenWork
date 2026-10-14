@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BarChart3, Palette, ShieldCheck, ListChecks, LogOut, LogIn, Menu, X, Zap } from "lucide-react";
+import { LayoutDashboard, BarChart3, Palette, ShieldCheck, ListChecks, LayoutTemplate, Users, Plug, Scale, LogOut, LogIn, Menu, X, Zap } from "lucide-react";
 import { useSession } from "../lib/session";
 import Welcome from "../components/Welcome";
 
@@ -8,6 +8,10 @@ const NAV = [
   { href: "/dashboard", label: "Guides", icon: LayoutDashboard, id: "dashboard" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, id: "analytics" },
   { href: "/settings/branding", label: "Branding", icon: Palette, id: "branding" },
+  { href: "/workspace/templates", label: "Templates", icon: LayoutTemplate, id: "templates" },
+  { href: "/workspace/team", label: "Team", icon: Users, id: "team" },
+  { href: "/workspace/integrations", label: "Integrations", icon: Plug, id: "integrations" },
+  { href: "/workspace/governance", label: "Governance", icon: Scale, id: "governance" },
   { href: "/admin", label: "Administration", icon: ShieldCheck, id: "admin" },
   { href: "/features", label: "Feature inventory", icon: ListChecks, id: "features" },
 ];

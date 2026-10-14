@@ -62,3 +62,6 @@ export * from './saveBrandingThemeBodyFontInput';
 export * from './saveBrandingThemeBodyLogosItem';
 export * from './saveBrandingThemeBodyTokenOverrides';
 export * from './saveGuideBody';
+export * from './suiteCommand';
+export * from './suiteDocument';
+export * from './suiteDocumentItemsItem';

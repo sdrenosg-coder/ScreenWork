@@ -426,7 +426,7 @@ export function buildCanonicalSource(input: BuildCanonicalInput): CanonicalSourc
   // ---------------------------------------------------------------------
   // 1. page-text (from textLayer)
   // ---------------------------------------------------------------------
-  if (Array.isArray(input.textLayer) && input.textLayer.length > 0) {
+  if (input.textLayer?.length) {
     adaptersUsed.push("textLayer");
     const decisions = input.textLayer.slice().sort((a, b) => a.pageIndex - b.pageIndex);
     for (const d of decisions) {
@@ -463,7 +463,7 @@ export function buildCanonicalSource(input: BuildCanonicalInput): CanonicalSourc
   // ---------------------------------------------------------------------
   // 2. layout-region (from layout)
   // ---------------------------------------------------------------------
-  if (Array.isArray(input.layout) && input.layout.length > 0) {
+  if (input.layout?.length) {
     adaptersUsed.push("layout");
     const layouts = input.layout
       .slice()
@@ -579,7 +579,7 @@ export function buildCanonicalSource(input: BuildCanonicalInput): CanonicalSourc
   // ---------------------------------------------------------------------
   // 5. ui-element (from uiElements)
   // ---------------------------------------------------------------------
-  if (Array.isArray(input.uiElements) && input.uiElements.length > 0) {
+  if (input.uiElements?.length) {
     adaptersUsed.push("uiElements");
     const indexes = input.uiElements
       .slice()
@@ -621,7 +621,7 @@ export function buildCanonicalSource(input: BuildCanonicalInput): CanonicalSourc
   // ---------------------------------------------------------------------
   // 6, 7, 8. diagram nodes, edges, description
   // ---------------------------------------------------------------------
-  if (Array.isArray(input.diagrams) && input.diagrams.length > 0) {
+  if (input.diagrams?.length) {
     adaptersUsed.push("diagrams");
     const diagrams = input.diagrams
       .slice()

@@ -5,6 +5,19 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type SuiteDocumentItemsItem = { [key: string]: unknown };
+
+export interface SuiteDocument {
+  items?: SuiteDocumentItemsItem[];
+  message?: string;
+  [key: string]: unknown;
+ }
+
+export interface SuiteCommand {
+  action: string;
+  [key: string]: unknown;
+ }
+
 export interface GuideSourceUpload {
   file: Blob;
 }

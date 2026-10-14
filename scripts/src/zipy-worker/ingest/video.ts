@@ -53,9 +53,10 @@ import {
 import {
   VlmError,
   recognizeUiElements,
-  type UiElement,
-  type VlmEngine,
+  type RecognizedElement,
+  type VlmProvider,
 } from "@workspace/zipy/ingest/vlmElements";
+type VlmEngine = VlmProvider | "none";
 
 import {
   AudioIngestError,
@@ -167,7 +168,7 @@ export interface VideoIngestOptions {
   /** Override OCR service URL. */
   readonly ocrServiceUrl?: string;
   /** Override VLM engine. */
-  readonly vlmEngine?: VlmEngine;
+  readonly vlmEngine?: VlmProvider | "none";
   /** Override VLM service URL. */
   readonly vlmServiceUrl?: string;
   /**
@@ -616,17 +617,15 @@ export async function ingestVideo(
 
       // OCR ----------------------------------------------------------------
       let ocrResult: OcrResult | null = null;
-      if (options.ocrEngine !== "none") {
+      if (options.ocrEngine !== undefined || options.runVlm !== false) {
         try {
-          ocrResult = await runOcr({
+          ocrResult = await runOcr(await readFile(framePath), {
             inputPath: framePath,
-            mimeType: "image/png",
             engine: options.ocrEngine,
-            serviceUrl: options.ocrServiceUrl,
-            language: options.ocrLanguage,
+            languages: options.ocrLanguage ? [options.ocrLanguage] : undefined,
           });
         } catch (err) {
-          if (err instanceof OcrError && err.code === "engine-not-configured") {
+          if (err instanceof OcrError && ["engine-unavailable", "cloud-not-configured"].includes(err.code)) {
             // OCR is required for video on-screen text. Report once; the
             // caller can still receive frames with empty onScreenText.
             if (!warnings.some((w) => w.startsWith("OCR engine not configured"))) {
@@ -646,18 +645,17 @@ export async function ingestVideo(
       }
 
       // VLM (optional) -----------------------------------------------------
-      let vlmElements: UiElement[] = [];
+      let vlmElements: readonly RecognizedElement[] = [];
       const runVlm = options.runVlm !== false && options.vlmEngine !== "none";
       if (runVlm) {
         try {
-          vlmElements = await recognizeUiElements({
-            inputPath: framePath,
-            mimeType: "image/png",
-            engine: options.vlmEngine,
-            serviceUrl: options.vlmServiceUrl,
+          const result = await recognizeUiElements({ image: await readFile(framePath), ocr: ocrResult }, {
+            inputPath: framePath, mimeType: "image/png",
+            provider: options.vlmEngine,
           });
+          vlmElements = result.elements;
         } catch (err) {
-          if (err instanceof VlmError && err.code === "engine-not-configured") {
+          if (err instanceof VlmError && err.code === "provider-unavailable") {
             if (!warnings.some((w) => w.startsWith("VLM engine not configured"))) {
               warnings.push(
                 "VLM UI-element recognition engine not configured; video frames were sampled but no UI elements were recognized.",
@@ -676,27 +674,27 @@ export async function ingestVideo(
 
       const ocrBlocks: VideoFrameResult["ocrBlocks"] = ocrResult === null
         ? []
-        : ocrResult.blocks.map((b, i) => ({
+        : ocrResult.regions.map((b, i) => ({
             ordinal: i,
             text: b.text,
             confidence: b.confidence,
             box: {
-              x: b.box.x,
-              y: b.box.y,
-              width: b.box.width,
-              height: b.box.height,
+              x: b.bbox.x,
+              y: b.bbox.y,
+              width: b.bbox.width,
+              height: b.bbox.height,
             },
           }));
       const vlmRuns: VideoFrameResult["vlmElements"] = vlmElements.map((el, i) => ({
         ordinal: i,
-        elementType: el.elementType,
+        elementType: el.kind,
         label: el.label,
         confidence: el.confidence,
         box: {
-          x: el.box.x,
-          y: el.box.y,
-          width: el.box.width,
-          height: el.box.height,
+          x: el.bbox.x,
+          y: el.bbox.y,
+          width: el.bbox.width,
+          height: el.bbox.height,
         },
       }));
 
@@ -1027,15 +1025,16 @@ function parseStoredFrame(raw: unknown): VideoFrameResult | null {
   const ocrEngine: VideoFrameResult["ocrEngine"] =
     ocrEngineRaw === "easyocr" ||
     ocrEngineRaw === "tesseract" ||
-    ocrEngineRaw === "cloud" ||
-    ocrEngineRaw === "auto"
+    ocrEngineRaw === "cloud"
       ? ocrEngineRaw
       : null;
   const vlmEngineRaw = f["vlmEngine"];
   const vlmEngine: VlmEngine | null =
-    vlmEngineRaw === "vllm" ||
+    vlmEngineRaw === "openai" ||
+    vlmEngineRaw === "anthropic" ||
+    vlmEngineRaw === "gemini" ||
     vlmEngineRaw === "ollama" ||
-    vlmEngineRaw === "cloud"
+    vlmEngineRaw === "vllm"
       ? vlmEngineRaw
       : null;
   return {
