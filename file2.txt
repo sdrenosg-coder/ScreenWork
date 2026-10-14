@@ -1,0 +1,26 @@
+
+Add `firefox` and `webkit` when the operator wants the `PLAYWRIGHT_BROWSER`
+override. The `--with-deps` flag installs the OS libraries Chromium needs
+(`libnss3`, `libatk1.0-0`, `libgbm1`, …). On a distro where `--with-deps`
+does not cover everything (Alpine, some minimal images), install the
+libraries from the Playwright documentation's "Managing browser binaries"
+section. The worker process prints the exact missing library name when a
+browser cannot launch; the error is not silenced.
+
+### 1.3 Required for OCR, layout parsing and speech-to-text
+
+The default chain is local open-source models. These are optional per
+workspace: the ingestion routes for URL and text do not require them, and
+the routes for image, PDF, DOCX, PPTX, audio and video return a 503 naming
+the missing dependency when their processing engine is not configured.
+
+| Capability         | Environment variable          | Notes |
+|--------------------|-------------------------------|-------|
+| OCR                | `OCR_ENGINE` (`easyocr`, `tesseract`, `cloud`, `auto`) and either `OCR_SERVICE_URL` or `PYTHON_PATH` | `auto` (default) uses EasyOCR when available, falls back to Tesseract. `cloud` requires the operator to add a driver; see §3. |
+| Layout + tables    | `LAYOUT_ENGINE=docling` and `DOCLING_SERVICE_URL` | Docling runs as a sidecar HTTP service. It is not bundled; the operator builds it from the Docling project's container image or the Python package. |
+| Speech-to-text     | `STT_ENGINE` (`whisper-local`, `whisper-cpp`, `cloud`, `none`) and `STT_SERVICE_URL` | `none` disables audio/video ingestion with a clear 503. The recommended on-prem default is a whisper.cpp server reachable at `STT_SERVICE_URL`. |
+
+### 1.4 Optional: S3-compatible object storage
+
+Set these when `STORAGE_DRIVER=s3`. Any S3-compatible endpoint (MinIO,
+Ceph, Wasabi, AWS S3, GCS in interoperability mode) is accepted:

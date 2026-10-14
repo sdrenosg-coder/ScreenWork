@@ -1,0 +1,2 @@
+LLM_DEFAULT_PROVIDER=ollama
+LLM_FALLBACK_CHAIN=openai,anthropic

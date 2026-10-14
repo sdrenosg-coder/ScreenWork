@@ -1,0 +1,17 @@
+
+`PYTHON_PATH` points at the interpreter the worker should invoke
+(defaults to `python3`). When `OCR_ENGINE=cloud` is set, the operator must
+add a driver under the ingest package; the repository does not ship a
+cloud OCR adapter because the shapes of the cloud APIs differ. When
+neither a local engine nor a cloud driver is available, image/PDF
+ingestion returns 503 with the missing engine named.
+
+---
+
+## 7. Postgres operations
+
+### 7.1 Backup
+
+Logical backup with `pg_dump` is sufficient for the schema and the
+application data. Screenshots and artifacts live in object storage and are
+backed up separately (§8).

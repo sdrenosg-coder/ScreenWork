@@ -1,0 +1,49 @@
+# Zipy AI — background worker unit.
+#
+# The worker drives Playwright, the OCR/Docling/STT sidecars and the LLM
+# adapter. It requires write access to the browser's cache directory and,
+# when STORAGE_DRIVER=local, to STORAGE_LOCAL_ROOT. It requires outbound
+# network access to the sidecars and the LLM endpoint the operator
+# configured.
+
+[Unit]
+Description=Zipy AI background worker
+Documentation=file:/opt/zipy/docs/operations/on-prem.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zipy
+Group=zipy
+WorkingDirectory=/opt/zipy
+EnvironmentFile=/etc/zipy/zipy.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/zipy/apps/worker/dist/index.js
+Restart=on-failure
+RestartSec=10s
+TimeoutStopSec=120s
+KillSignal=SIGTERM
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zipy-worker
+
+NoNewPrivileges=true
+PrivateTmp=true
+# The worker needs write access to the object store and the browser cache.
+# HOME points at the zipy user's home where ~/.cache/ms-playwright lives.
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/lib/zipy /opt/zipy/.cache
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+# The worker spawns child processes (browser and its helpers).
+# If the site policy pins to a fixed set, uncomment and adjust:
+# RestrictNamespaces=false
+
+[Install]
+WantedBy=multi-user.target

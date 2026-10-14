@@ -1,0 +1,7 @@
+
+The root `start` script runs `node apps/web/server.js`, which binds to
+`0.0.0.0:${PORT}`. Do not bind the web app to `localhost`; a reverse proxy
+in front of the app forwards connections to the container/VM network
+address.
+
+### 3.7 Start the worker

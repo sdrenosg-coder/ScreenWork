@@ -1,0 +1,11 @@
+
+When the failure was a DDL error (an unexpected column, a malformed
+statement), restore from the backup the upgrade script produced and open a
+support ticket with the failing statement.
+
+---
+
+## 8. "Disk is filling up"
+
+The object store grows with screenshots. Confirm retention is actually
+running:

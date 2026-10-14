@@ -1,0 +1,23 @@
+
+The application's pool (`DATABASE_POOL_MAX`, default 10) is per web or
+worker process. Size `max_connections` above `pool_max * (web + workers)`
+with headroom for operator sessions. Set `DATABASE_STATEMENT_TIMEOUT_MS`
+(the default is 30 s) low enough that a runaway query is killed before it
+takes down the queue; the default is a fine starting point.
+
+---
+
+## 8. Storage layout and backup
+
+### 8.1 Local object store (`STORAGE_DRIVER=local`)
+
+Objects are written under `STORAGE_LOCAL_ROOT`. The layout is
+content-addressed by the artifact's hash (see `packages/hashing/src/contentHash.ts`
+and `packages/storage/src/localDriver.ts`); the operator should not
+manipulate the tree directly. Deleting a file whose hash is still
+referenced by an artifact row produces a missing-object error on the next
+read and is not the intended deletion path — use the retention sweep or
+explicit artifact deletion.
+
+Backup the root with any tool that captures a consistent point-in-time
+copy (restic, borg, rsync to a snapshot, or a filesystem snapshot):

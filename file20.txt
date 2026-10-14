@@ -1,0 +1,9 @@
+
+Take the backup with the application running if the workload allows
+`pg_dump`'s consistent snapshot (it does). For point-in-time recovery,
+run continuous archiving (`archive_mode=on`, `archive_command` streaming
+WAL to durable storage).
+
+### 7.2 Extensions
+
+Both extensions must be present before the migration runner runs:

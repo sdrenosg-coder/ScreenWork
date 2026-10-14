@@ -1,0 +1,18 @@
+
+Do not lower timeouts to counteract warm-up; the effect is bounded and
+low timeouts will fail real jobs.
+
+---
+
+## 10. Filing an issue
+
+Include:
+
+- `journalctl -u zipy-web -u zipy-worker --since '<timestamp>' --no-pager`
+- The release tag (`git -C /opt/zipy describe --tags --always`)
+- The failing request as an `curl` command with the cookie redacted.
+- The exact HTTP status and response body (never the request body for an
+  artifact upload — it may carry customer content).
+- Whether the same input succeeds against the operator's staging instance.
+
+Do not paste filled secrets from `/etc/zipy/zipy.env`.

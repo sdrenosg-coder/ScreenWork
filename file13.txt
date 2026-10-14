@@ -1,0 +1,26 @@
+
+Tune `JOBS_CONCURRENCY` first. Each unit of concurrency in the worker is
+an in-flight job, and browser-execution jobs each hold a headless browser
+context. `PLAYWRIGHT_MAX_CONTEXTS` caps the browser contexts per worker;
+keep `JOBS_CONCURRENCY >= PLAYWRIGHT_MAX_CONTEXTS` so a browser-backed job
+does not starve behind an ingestion job.
+
+Provision RAM accordingly: each headless Chromium context is roughly
+150–300 MB at the default viewport.
+
+---
+
+## 6. Systems that run beside the app
+
+Three capabilities are provided by separate services the operator runs.
+Each is optional; a workspace that does not use the corresponding feature
+does not need the service.
+
+### 6.1 Docling (layout + table parsing)
+
+Docling parses PDFs and Office documents into a structured representation
+(text blocks, tables, figures, headers). The platform calls it over HTTP.
+Any deployment of Docling that accepts a document and returns its
+structured model works; the platform uses the JSON output.
+
+The Docling project publishes a container image. A minimal on-prem setup:

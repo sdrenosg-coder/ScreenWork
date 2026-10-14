@@ -1,0 +1,6 @@
+
+---
+
+## 4. "Image/PDF/DOCX ingestion returns 503"
+
+The route names the missing dependency in the response body:

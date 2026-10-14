@@ -1,0 +1,10 @@
+
+The sidecars are customer-supplied; the repository does not bundle them.
+Build guides are maintained by each upstream project and are linked from
+`external-setup.md`.
+
+---
+
+## 5. "Generation fails with llm_unconfigured"
+
+No LLM provider is reachable. Check the env file and connectivity:

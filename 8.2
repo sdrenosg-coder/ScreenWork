@@ -1,0 +1,65 @@
+
+### 8.2 S3-compatible store (`STORAGE_DRIVER=s3`)
+
+Backup is a property of the bucket, not of the application. Enable
+versioning and lifecycle rules on the bucket; the application does not
+version objects itself. Server-side encryption is a bucket policy.
+
+### 8.3 What to back up
+
+| Data                       | Where                                | Frequency |
+|----------------------------|--------------------------------------|-----------|
+| Postgres schema + rows     | `pg_dump` or continuous WAL archiving | Daily full, continuous incremental |
+| Object store contents      | `STORAGE_LOCAL_ROOT` or the S3 bucket | Daily full |
+| Environment file / secrets | The operator's secret store           | On change |
+| TLS certificate            | The operator's certificate store      | Before expiry |
+
+The application is designed to be recoverable from these three. There is
+no hidden state: the schema is the only structured store and the object
+store is the only blob store.
+
+---
+
+## 9. Tuning and scaling
+
+### 9.1 Vertical scaling
+
+The web app and the worker are separate processes for a reason: a browser
+execution pegging a CPU should not slow the API. Run them on the same host
+for a small install and split them once the worker's CPU or memory
+pressure affects the API's latency.
+
+The most memory-hungry path is browser execution. A single Chromium
+context at the default 1440×900 viewport at 2× DPR is roughly 150–300 MB.
+`PLAYWRIGHT_MAX_CONTEXTS` (default 2) caps concurrency accordingly.
+
+### 9.2 Horizontal scaling of the worker
+
+Multiple workers on multiple hosts all poll the same Postgres `jobs`
+table. There is no leader election: the row-level lock in the dequeue is
+the only coordination. Add workers until the queue's steady-state depth
+stops falling; past that point the workers contend on the lock and
+throughput plateaus.
+
+Point every worker at the same `DATABASE_URL` and the same
+`STORAGE_DRIVER` configuration. They do not need to share a filesystem
+when `STORAGE_DRIVER=s3`; they must share `STORAGE_LOCAL_ROOT` (a network
+filesystem or a replica) when `STORAGE_DRIVER=local`, because any worker
+may be asked to serve any artifact.
+
+### 9.3 Redis (optional)
+
+Redis is not required. When `REDIS_URL` is set, the queue module uses it
+for a wake-up notification so a worker does not wait for the poll
+interval before starting a job. Without Redis, the poll interval
+(`JOBS_POLL_INTERVAL_MS`, default 1 s) is the latency floor between an
+enqueue and a worker starting it. Neither changes correctness: the
+Postgres row is the source of truth and the lock is the only coordination.
+
+### 9.4 Postgres tuning for retrieval
+
+Fusion stores embeddings in pgvector columns. When the workspace corpus is
+large, an HNSW or IVFFlat index on the vector column is worth adding; the
+migration runner does not create one because the right index depends on
+the embedding dimensionality and the retrieval pattern. Create it once the
+workspace has more than a few thousand embedded items:

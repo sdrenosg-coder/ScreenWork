@@ -1,0 +1,17 @@
+
+The runner attempts these itself when it has sufficient privileges. If the
+application's database role does not have `CREATE EXTENSION` privilege,
+run the two statements once as superuser and the runner will skip them.
+
+### 7.3 Retention
+
+The retention policy for artifact and guide rows is configurable per
+workspace through the admin UI (`/admin`) and the
+`/api/admin/retention` endpoint. The retention sweep deletes expired
+artifacts and their object-store contents. The default is 180 days
+(`DEFAULT_RETENTION_DAYS`). A workspace's override takes precedence over
+the server default.
+
+### 7.4 Recommended Postgres settings
+
+Starting point for a host with 8 GB of RAM dedicated to Postgres:

@@ -1,0 +1,1169 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Zipy AI REST API",
+    "version": "1.0.0",
+    "description": "Versioned REST surface for Zipy AI. Endpoints that require a customer-supplied external service (a hosted LLM provider, SMTP, an IdP, a platform app, a payment gateway) return a 503 with an error envelope naming the missing configuration rather than a mock response."
+  },
+  "servers": [
+    { "url": "/", "description": "Same origin as the deployed web application." }
+  ],
+  "tags": [
+    { "name": "Auth" },
+    { "name": "Sources" },
+    { "name": "Workflows" },
+    { "name": "Guides" },
+    { "name": "Review" },
+    { "name": "Annotations" },
+    { "name": "Screenshots" },
+    { "name": "Artifacts" },
+    { "name": "Fusion" },
+    { "name": "Styles" },
+    { "name": "Publishing" },
+    { "name": "Analytics" },
+    { "name": "Admin" },
+    { "name": "Billing" }
+  ],
+  "security": [{ "sessionCookie": [] }],
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "zipy_session",
+        "description": "Session cookie issued by /api/auth/login or /api/auth/signup. The cookie name is configurable via SESSION_COOKIE_NAME."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error", "message"],
+        "properties": {
+          "error": { "type": "string", "description": "Stable machine-readable code." },
+          "message": { "type": "string" },
+          "field": { "type": "string" }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "integer", "minimum": 1 },
+          "hasMore": { "type": "boolean" },
+          "nextCursor": { "type": ["string", "null"] },
+          "total": { "type": ["integer", "null"] }
+        }
+      },
+      "Guide": {
+        "type": "object",
+        "required": ["id", "workspaceId", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "title": { "type": ["string", "null"] },
+          "summary": { "type": ["string", "null"] },
+          "slug": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["draft", "in_review", "published", "archived"] },
+          "stepCount": { "type": ["integer", "null"] },
+          "language": { "type": ["string", "null"] },
+          "aiGenerated": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Workflow": {
+        "type": "object",
+        "required": ["id", "workspaceId", "status", "goal", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "guideId": { "type": ["string", "null"], "format": "uuid" },
+          "status": { "type": "string", "enum": ["draft", "synthesizing", "synthesized", "running", "failed", "archived"] },
+          "goal": { "type": "string" },
+          "startUrl": { "type": ["string", "null"], "format": "uri" },
+          "planRevision": { "type": ["integer", "null"] },
+          "stepCount": { "type": ["integer", "null"] },
+          "lowConfidenceStepCount": { "type": ["integer", "null"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "EnqueuedJob": {
+        "type": "object",
+        "required": ["id", "kind", "status", "created"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "kind": { "type": "string" },
+          "status": { "type": "string" },
+          "created": { "type": "boolean" },
+          "idempotencyKey": { "type": "string" }
+        }
+      },
+      "SignupRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 8 },
+          "displayName": { "type": ["string", "null"] },
+          "workspaceName": { "type": ["string", "null"] }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        }
+      },
+      "SessionEnvelope": {
+        "type": "object",
+        "required": ["user", "activeWorkspaceId", "workspaces"],
+        "properties": {
+          "user": {
+            "type": "object",
+            "required": ["id", "email"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "email": { "type": "string", "format": "email" },
+              "displayName": { "type": ["string", "null"] }
+            }
+          },
+          "activeWorkspaceId": { "type": ["string", "null"], "format": "uuid" },
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "role"],
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "name": { "type": "string" },
+                "role": { "type": "string", "enum": ["owner", "admin", "editor", "reviewer", "viewer"] }
+              }
+            }
+          }
+        }
+      },
+      "UrlSourceRequest": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "workflowId": { "type": ["string", "null"], "format": "uuid" },
+          "waitForNetworkIdle": { "type": "boolean", "default": true }
+        }
+      },
+      "TextSourceRequest": {
+        "type": "object",
+        "required": ["text", "goal"],
+        "properties": {
+          "text": { "type": "string" },
+          "goal": { "type": "string" },
+          "workflowId": { "type": ["string", "null"], "format": "uuid" }
+        }
+      },
+      "CombineSourcesRequest": {
+        "type": "object",
+        "required": ["sourceIds"],
+        "properties": {
+          "sourceIds": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "format": "uuid" }
+          },
+          "priority": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["url", "text", "image", "pdf", "docx", "pptx", "audio", "video"] }
+          }
+        }
+      },
+      "ArtifactUploadResponse": {
+        "type": "object",
+        "required": ["artifactId", "contentHash", "version", "deduplicated"],
+        "properties": {
+          "artifactId": { "type": "string", "format": "uuid" },
+          "contentHash": { "type": "string" },
+          "version": { "type": "integer", "minimum": 1 },
+          "deduplicated": { "type": "boolean" },
+          "sourceKind": { "type": "string", "enum": ["url", "text", "image", "pdf", "docx", "pptx", "audio", "video"] }
+        }
+      },
+      "ConflictReport": {
+        "type": "object",
+        "required": ["workflowId", "conflicts"],
+        "properties": {
+          "workflowId": { "type": "string", "format": "uuid" },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "kind", "summary", "sources"],
+              "properties": {
+                "id": { "type": "string" },
+                "kind": { "type": "string", "enum": ["instruction_conflict", "entity_disagreement", "missing_reference"] },
+                "summary": { "type": "string" },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["artifactId", "region"],
+                    "properties": {
+                      "artifactId": { "type": "string", "format": "uuid" },
+                      "region": { "type": "string" }
+                    }
+                  }
+                },
+                "suggestedResolution": { "type": ["string", "null"] }
+              }
+            }
+          }
+        }
+      },
+      "GuideGenerationRequest": {
+        "type": "object",
+        "properties": {
+          "promptVersionId": { "type": "string" },
+          "provider": { "type": "string", "enum": ["openai", "anthropic", "gemini", "ollama", "vllm"] },
+          "model": { "type": "string" },
+          "styleProfileId": { "type": ["string", "null"] },
+          "languages": { "type": "array", "items": { "type": "string" } },
+          "force": { "type": "boolean" }
+        }
+      },
+      "ExportRequest": {
+        "type": "object",
+        "required": ["format"],
+        "properties": {
+          "format": { "type": "string", "enum": ["pdf", "html", "markdown", "docx", "image-pack", "embed"] }
+        }
+      },
+      "StyleProfile": {
+        "type": "object",
+        "properties": {
+          "tone": { "type": ["string", "null"], "enum": ["formal", "casual", "technical", null] },
+          "readingLevel": { "type": ["integer", "null"] },
+          "audience": { "type": ["string", "null"], "enum": ["end-user", "admin", "developer", null] },
+          "industry": { "type": ["string", "null"] },
+          "brandVoiceExampleIds": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+          "approvedTerms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["term"],
+              "properties": {
+                "term": { "type": "string" },
+                "expansion": { "type": ["string", "null"] }
+              }
+            }
+          },
+          "doNotTranslate": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "ReviewSummary": {
+        "type": "object",
+        "required": ["workflowId", "reviewMode", "actions"],
+        "properties": {
+          "workflowId": { "type": "string", "format": "uuid" },
+          "reviewMode": { "type": "boolean" },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "riskClass", "status"],
+              "properties": {
+                "id": { "type": "string" },
+                "riskClass": { "type": "string", "enum": ["read-only", "write", "destructive", "financial", "external-communication"] },
+                "status": { "type": "string", "enum": ["pending", "approved", "rejected", "edited"] }
+              }
+            }
+          }
+        }
+      },
+      "ReviewDecision": {
+        "type": "object",
+        "required": ["id", "decidedAt", "decision", "reviewerId"],
+        "properties": {
+          "id": { "type": "string" },
+          "decidedAt": { "type": "string", "format": "date-time" },
+          "decision": { "type": "string", "enum": ["approve", "reject", "edit"] },
+          "reviewerId": { "type": "string", "format": "uuid" },
+          "note": { "type": ["string", "null"] }
+        }
+      },
+      "ReviewDecisionsPage": {
+        "type": "object",
+        "required": ["workflowId", "decisions", "nextCursor"],
+        "properties": {
+          "workflowId": { "type": "string", "format": "uuid" },
+          "decisions": { "type": "array", "items": { "$ref": "#/components/schemas/ReviewDecision" } },
+          "nextCursor": { "type": ["string", "null"] }
+        }
+      },
+      "Annotation": {
+        "type": "object",
+        "required": ["id", "screenshotId", "kind", "geometry"],
+        "properties": {
+          "id": { "type": "string" },
+          "screenshotId": { "type": "string", "format": "uuid" },
+          "kind": { "type": "string", "enum": ["highlight", "arrow", "badge", "inset", "blur"] },
+          "geometry": {
+            "type": "object",
+            "required": ["x", "y", "width", "height"],
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "width": { "type": "number" },
+              "height": { "type": "number" }
+            }
+          },
+          "altText": { "type": ["string", "null"] }
+        }
+      },
+      "RedactionRequest": {
+        "type": "object",
+        "properties": {
+          "patterns": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "AnalyticsEvent": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["guide.view", "guide.complete", "step.dropoff", "search.query", "step.feedback"] },
+          "guideId": { "type": ["string", "null"], "format": "uuid" },
+          "stepIndex": { "type": ["integer", "null"] },
+          "payload": { "type": ["object", "null"], "additionalProperties": true }
+        }
+      },
+      "AuditEntry": {
+        "type": "object",
+        "required": ["id", "at", "actorId", "action"],
+        "properties": {
+          "id": { "type": "string" },
+          "at": { "type": "string", "format": "date-time" },
+          "actorId": { "type": "string", "format": "uuid" },
+          "actorIp": { "type": ["string", "null"] },
+          "action": { "type": "string" },
+          "detail": { "type": ["object", "null"], "additionalProperties": true }
+        }
+      },
+      "AuditPage": {
+        "type": "object",
+        "required": ["entries", "nextCursor"],
+        "properties": {
+          "entries": { "type": "array", "items": { "$ref": "#/components/schemas/AuditEntry" } },
+          "nextCursor": { "type": ["string", "null"] }
+        }
+      },
+      "RetentionUpdate": {
+        "type": "object",
+        "required": ["retentionDays"],
+        "properties": {
+          "retentionDays": { "type": "integer", "minimum": 1, "maximum": 3650 }
+        }
+      },
+      "UsageEnvelope": {
+        "type": "object",
+        "required": ["workspaceId", "plan", "usage"],
+        "properties": {
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "plan": { "type": "string", "enum": ["free", "pro", "business", "enterprise"] },
+          "usage": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "CustomDomain": {
+        "type": "object",
+        "required": ["domain", "state"],
+        "properties": {
+          "domain": { "type": "string" },
+          "state": { "type": "string", "enum": ["pending", "verified", "failed"] },
+          "verifiedAt": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "GuideAccess": {
+        "type": "object",
+        "required": ["slug", "mode"],
+        "properties": {
+          "slug": { "type": "string" },
+          "mode": { "type": "string", "enum": ["public", "private", "password"] }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "The request body or a query parameter failed validation.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Unauthorized": {
+        "description": "No valid session cookie was presented.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Forbidden": {
+        "description": "The caller is authenticated but lacks the permission required for this operation.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "NotFound": {
+        "description": "The named resource does not exist in a workspace the caller can see.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Conflict": {
+        "description": "The operation conflicts with existing state (for example, an email is already registered).",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "ServiceUnavailable": {
+        "description": "A dependency this endpoint requires is not configured on this server. The `error` code names the class of dependency (config_error, storage_unavailable, llm_unconfigured, browser_unavailable, integration_not_configured); the `message` names the missing environment variable when applicable.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/signup": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Create a user and optionally a workspace",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SignupRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "User created and session issued.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SessionEnvelope" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Authenticate with email and password",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Session issued.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SessionEnvelope" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/artifacts/upload": {
+      "post": {
+        "tags": ["Artifacts"],
+        "summary": "Upload a file and register it as an artifact",
+        "description": "Multipart form-data upload. The file is content-hashed; a re-upload of identical content returns `deduplicated: true` and does not create a new version.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": { "file": { "type": "string", "format": "binary" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Uploaded or deduplicated.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArtifactUploadResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "413": { "description": "Payload too large." },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/sources/url": {
+      "post": {
+        "tags": ["Sources"],
+        "summary": "Queue a URL ingestion",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UrlSourceRequest" } } }
+        },
+        "responses": {
+          "202": {
+            "description": "Ingestion job enqueued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "job": { "$ref": "#/components/schemas/EnqueuedJob" } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/sources/text": {
+      "post": {
+        "tags": ["Sources"],
+        "summary": "Queue a text-prompt ingestion",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TextSourceRequest" } } }
+        },
+        "responses": {
+          "202": {
+            "description": "Ingestion job enqueued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "job": { "$ref": "#/components/schemas/EnqueuedJob" } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/sources/file": {
+      "post": {
+        "tags": ["Sources"],
+        "summary": "Queue a file ingestion (image, PDF, DOCX, PPTX, audio, video)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "sourceKind": { "type": "string", "enum": ["image", "pdf", "docx", "pptx", "audio", "video"] },
+                  "workflowId": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Ingestion job enqueued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "job": { "$ref": "#/components/schemas/EnqueuedJob" } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "413": { "description": "Payload too large." },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/sources/combine": {
+      "post": {
+        "tags": ["Sources"],
+        "summary": "Combine multiple ingested sources into a unified representation",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CombineSourcesRequest" } } }
+        },
+        "responses": {
+          "202": {
+            "description": "Fusion job enqueued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "job": { "$ref": "#/components/schemas/EnqueuedJob" } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/fusion/{id}/conflicts": {
+      "get": {
+        "tags": ["Fusion"],
+        "summary": "Read the conflict report for a fusion",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conflict report.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConflictReport" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/workflows/{id}/synthesize": {
+      "post": {
+        "tags": ["Workflows"],
+        "summary": "Enqueue a synthesis job for a workflow",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "promptVersionId": { "type": "string" },
+                  "provider": { "type": "string", "enum": ["openai", "anthropic", "gemini", "ollama", "vllm"] },
+                  "model": { "type": "string", "maxLength": 128 },
+                  "force": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Reused an existing in-flight job." },
+          "202": {
+            "description": "Synthesis job created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job": { "$ref": "#/components/schemas/EnqueuedJob" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/guides/{id}/generate": {
+      "post": {
+        "tags": ["Guides"],
+        "summary": "Enqueue a full content-generation pass for a guide",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GuideGenerationRequest" } } }
+        },
+        "responses": {
+          "202": {
+            "description": "Generation job enqueued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "job": { "$ref": "#/components/schemas/EnqueuedJob" } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/guides/{id}/export": {
+      "post": {
+        "tags": ["Guides"],
+        "summary": "Render a guide in a requested format",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ExportRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Rendered export.",
+            "content": {
+              "application/pdf": { "schema": { "type": "string", "format": "binary" } },
+              "text/html": { "schema": { "type": "string" } },
+              "text/markdown": { "schema": { "type": "string" } },
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": { "schema": { "type": "string", "format": "binary" } },
+              "application/zip": { "schema": { "type": "string", "format": "binary" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/styles/{id}": {
+      "get": {
+        "tags": ["Styles"],
+        "summary": "Read a style profile",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Style profile.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StyleProfile" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Styles"],
+        "summary": "Replace a style profile",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StyleProfile" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated style profile.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StyleProfile" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/screenshots/{id}/redact": {
+      "post": {
+        "tags": ["Screenshots"],
+        "summary": "Redact PII in a stored screenshot",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RedactionRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Redaction applied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["screenshotId", "regionsRedacted"],
+                  "properties": {
+                    "screenshotId": { "type": "string", "format": "uuid" },
+                    "regionsRedacted": { "type": "integer", "minimum": 0 },
+                    "version": { "type": "integer", "minimum": 1 }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/annotations/{id}": {
+      "get": {
+        "tags": ["Annotations"],
+        "summary": "Read annotations for a screenshot or step",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Annotation list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["items"],
+                  "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Annotation" } } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Annotations"],
+        "summary": "Replace annotations for a screenshot or step",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["items"],
+                "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Annotation" } } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated annotation list." },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/workflows/{id}/review": {
+      "get": {
+        "tags": ["Review"],
+        "summary": "Read the review state of a workflow",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Review summary.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReviewSummary" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Review"],
+        "summary": "Toggle review mode for a workflow",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reviewMode"],
+                "properties": { "reviewMode": { "type": "boolean" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated review summary.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReviewSummary" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/workflows/{id}/review/decisions": {
+      "get": {
+        "tags": ["Review"],
+        "summary": "Read the audit trail of review decisions",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 25 } },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decision page.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReviewDecisionsPage" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/analytics/events": {
+      "post": {
+        "tags": ["Analytics"],
+        "summary": "Record an analytics event",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnalyticsEvent" } } }
+        },
+        "responses": {
+          "202": { "description": "Event accepted." },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/admin/audit": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Read the workspace audit log",
+        "parameters": [
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 25 } },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "actorId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "action", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit entries page.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuditPage" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/admin/retention": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Read the workspace retention policy",
+        "responses": {
+          "200": {
+            "description": "Current retention policy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["retentionDays"],
+                  "properties": { "retentionDays": { "type": "integer", "minimum": 1 } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Update the workspace retention policy",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RetentionUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated retention policy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["retentionDays"],
+                  "properties": { "retentionDays": { "type": "integer", "minimum": 1 } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/billing/usage": {
+      "get": {
+        "tags": ["Billing"],
+        "summary": "Read current usage for the active workspace",
+        "responses": {
+          "200": {
+            "description": "Usage envelope.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UsageEnvelope" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/guides": {
+      "get": {
+        "tags": ["Guides"],
+        "summary": "List guides in the active workspace",
+        "parameters": [
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 25 } },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["draft", "in_review", "published", "archived"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Guide list envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["guides", "pagination"],
+                  "properties": {
+                    "guides": { "type": "array", "items": { "$ref": "#/components/schemas/Guide" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/v1/workflows": {
+      "get": {
+        "tags": ["Workflows"],
+        "summary": "List workflows in the active workspace",
+        "parameters": [
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 25 } },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["draft", "synthesizing", "synthesized", "running", "failed", "archived"] } },
+          { "name": "guideId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workflow list envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["workflows", "pagination"],
+                  "properties": {
+                    "workflows": { "type": "array", "items": { "$ref": "#/components/schemas/Workflow" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      },
+      "post": {
+        "tags": ["Workflows"],
+        "summary": "Create a workflow",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["goal"],
+                "properties": {
+                  "goal": { "type": "string", "minLength": 1, "maxLength": 2000 },
+                  "startUrl": { "type": "string", "format": "uri" },
+                  "guideId": { "type": "string", "format": "uuid" },
+                  "sourceIds": { "type": "array", "maxItems": 128, "items": { "type": "string", "format": "uuid" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Workflow created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["workflow"],
+                  "properties": { "workflow": { "$ref": "#/components/schemas/Workflow" } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/api/publishing/domains": {
+      "get": {
+        "tags": ["Publishing"],
+        "summary": "List custom domains for the active workspace",
+        "responses": {
+          "200": {
+            "description": "Custom domain list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["domains"],
+                  "properties": { "domains": { "type": "array", "items": { "$ref": "#/components/schemas/CustomDomain" } } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/publishing/access": {
+      "get": {
+        "tags": ["Publishing"],
+        "summary": "Read the access mode of a published guide",
+        "parameters": [
+          { "name": "slug", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access mode.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GuideAccess" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  }
+}

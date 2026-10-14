@@ -1,0 +1,105 @@
+
+The worker entrypoint is `apps/worker/src/index.ts`. It polls the job queue
+when `DATABASE_URL` is set and logs a clear diagnostic when the queue is
+not reachable. It does not silently exit; a supervisor (systemd, s6,
+Kubernetes) should restart it on crash.
+
+### 3.8 Reverse proxy and TLS
+
+Terminate TLS at a reverse proxy (nginx, Caddy, HAProxy, or the customer's
+ingress controller). Forward:
+
+- `Host` header (unchanged).
+- `X-Forwarded-Proto`, `X-Forwarded-For`, `X-Forwarded-Host`.
+- The full request body up to the size limit the platform documents
+  (default 100 MB for artifact upload).
+
+Do not strip cookies: the session is carried in `zipy_session` by default
+(`SESSION_COOKIE_NAME`).
+
+---
+
+## 4. Upgrade
+
+1. Back up Postgres and the object store.
+2. `git fetch && git checkout <new-tag>`.
+3. `npm ci`.
+4. `npm run migrate` (idempotent; runs only new statements).
+5. Restart worker, then web. Stopping workers first drains in-flight jobs;
+   stopping web first is safe but produces brief 502s at the proxy.
+6. `npx playwright install --with-deps chromium` when the lockfile bumped
+   the Playwright version (check `git diff` on the lockfile).
+
+Downgrade is not supported by the migration runner. Restore from backup.
+
+---
+
+## 5. Backups and retention
+
+- **Postgres**: operator's normal tooling (`pg_dump`, `pgBackRest`,
+  managed snapshot). The platform does not write backups.
+- **Object store**: operator's normal tooling. The `local` driver stores
+  artifacts in flat files under `STORAGE_LOCAL_ROOT`; back up that
+  directory.
+- **Retention**: `DEFAULT_RETENTION_DAYS` (default 180) sets the baseline.
+  Per-workspace overrides are set through the admin retention surface
+  (`/api/admin/retention`). The retention sweep is a job the operator
+  schedules through their queue supervisor; the repo does not schedule it
+  by itself.
+
+---
+
+## 6. Health and observability
+
+The web app exposes no dedicated `/healthz` route in this repository; a
+liveness probe should fetch `GET /` and assert a 2xx/3xx, or check that the
+process is accepting connections from the reverse proxy. A readiness probe
+should additionally verify that `DATABASE_URL` is reachable — the platform
+returns 503 on `/api/v1/guides` when the database is not configured, which
+is a reasonable signal. The worker writes a startup line to stdout when it
+successfully connects to the queue and a distinct error line when it does
+not; the operator's log aggregation should alert on the error line.
+
+---
+
+## 7. Security checklist
+
+- [ ] `SESSION_SECRET` is at least 32 bytes and unique to this deployment.
+- [ ] `ENCRYPTION_MASTER_KEY` is set **before** any customer data is
+      accepted. Rotation is a manual operation.
+- [ ] TLS is terminated in front of the web app; the app itself does not
+      serve HTTPS. `SESSION_COOKIE_SECURE` defaults to true when
+      `NODE_ENV=production`.
+- [ ] `CORS_ALLOWED_ORIGINS` is set explicitly. `*` is refused in
+      production by `validateStartupConfig`.
+- [ ] Postgres is reachable only from the web and worker hosts.
+- [ ] Object storage credentials are scoped to the bucket; no account-wide
+      keys are used.
+- [ ] The worker host has the browser binaries installed and is the only
+      host that runs Playwright. Do not run browsers on the web host.
+- [ ] Audit log retention is configured to meet the customer's compliance
+      regime.
+- [ ] `WEBHOOK_SIGNING_SECRET` is set; unsigned outbound deliveries are
+      refused.
+
+---
+
+## 8. What is not provided by this repository
+
+- No shipped Terraform, Helm chart, Ansible playbook or systemd unit.
+  The operator writes the packaging for their environment. The Docker
+  Compose file at the repository root is intended for local development
+  and for the first-usable-build target (plan-0); it is not a production
+  on-prem installer.
+- No automatic key rotation.
+- No automatic retention sweep. The retention package
+  (`packages/security/src/retention.ts`) implements the policy; scheduling
+  it is the operator's responsibility.
+- No bundled Docling, OCR or STT server images. The operator supplies them
+  and points the platform at them through `_SERVICE_URL` variables. A
+  capability whose service is not configured returns a clear 503 rather
+  than running a substitute.
+- No managed SAML IdP. The SAML module verifies the customer's IdP metadata
+  when supplied; it does not return a test IdP.
+- No log shipping, metrics scraping or tracing configuration. Standard
+  process output is used; the operator wires it into their stack.

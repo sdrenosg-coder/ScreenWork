@@ -1,0 +1,3 @@
+
+Compare with the versions the running checkout declares. When the schema is
+behind by everything after the last recorded version, re-run:

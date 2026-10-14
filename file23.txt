@@ -1,0 +1,17 @@
+
+The message names the variable. The two hard failures `validateStartupConfig`
+enforces are:
+
+- `SESSION_SECRET` missing → real the file at `/etc/zipy/zipy.env`.
+- `SESSION_SECRET` shorter than 32 characters → regenerate with
+  `openssl rand -hex 32` and restart.
+
+If the journal shows a syntax error in the env file, check for unquoted
+spaces or shell metacharacters on the right-hand side; the file is sourced
+by systemd, not by a shell, and the parser is stricter.
+
+---
+
+## 2. "Login succeeds but the session is rejected at the next request"
+
+Cause: `SESSION_SECRET` differs across web replicas. Verify:

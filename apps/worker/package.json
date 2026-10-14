@@ -1,0 +1,23 @@
+{
+  "name": "@zipy/worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zipy AI background worker — ingestion, browser automation and generation jobs.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --experimental-strip-types src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.4"
+  },
+  "workspaces_dependencies_notes": "Queue, storage, DB and Playwright/OCR/LLM adapters are added to this manifest in the phases that introduce them. No worker entrypoint (src/index.ts) exists yet — it is the first deliverable of the Storage/Jobs phase."
+}

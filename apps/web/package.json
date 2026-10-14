@@ -1,0 +1,29 @@
+{
+  "name": "@zipy/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zipy AI web application (Next.js) — UI, REST API routes and the production server entrypoint.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0 -p ${PORT:-3000}",
+    "build": "next build",
+    "start": "node server.js",
+    "lint": "next lint",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.4"
+  },
+  "workspaces_dependencies_notes": "Workspace packages (@zipy/db, @zipy/storage, @zipy/jobs, ...) are resolved via the monorepo root workspaces and tsconfig path aliases; they are added to this manifest as their phases land."
+}

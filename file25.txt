@@ -1,0 +1,35 @@
+
+Notes:
+
+- Run `npm run migrate` before restarting the app. Migrations are additive
+  in the sense that they do not drop tables or rename columns; a running
+  old app continues to work against a migrated database (the new columns
+  are nullable or defaulted). The reverse — a new app against an old
+  schema — is not supported; migrate first.
+- Restart the worker before the web app when the change touches the job
+  payload shape, so a new web app does not enqueue a payload an old
+  worker cannot parse.
+- Tag the checkout in version control before upgrading so a rollback is
+  `git checkout <previous-tag>` plus a restart. Schema rollback is a
+  manual operation: the migrations do not carry down-migrations because a
+  down-migration that drops data is almost never what the operator wants.
+  A failed upgrade is recovered by restoring the pre-upgrade backup (§7.1
+  and §8).
+
+Zero-downtime upgrade of the web app requires two instances behind the
+reverse proxy. Nothing in the repository prevents this, but the operator
+supplies the second instance and the proxy configuration.
+
+---
+
+## 11. Health checks and observability
+
+### 11.1 Process health
+
+systemd reports whether the processes are running. The web app's process
+exits non-zero on a configuration failure raised by
+`validateStartupConfig()`, which `Restart=on-failure` will then keep
+retrying — the fix is to supply the missing variable, not to disable the
+restart.
+
+Check the current state:

@@ -1,0 +1,44 @@
+# Local infrastructure for the Zipy AI monorepo.
+# Brings up the always-on dev dependencies (Postgres with pgvector, Redis).
+# The web app and worker run on the host via npm scripts; the Replit deployment
+# runs `npm start` directly. No credentials are baked in — override via env.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: zipy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zipy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zipy_local_dev_only}
+      POSTGRES_DB: ${POSTGRES_DB:-zipy}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - zipy-postgres-data:/var/lib/postgresql/data
+      - ./packages/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zipy} -d ${POSTGRES_DB:-zipy}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: zipy-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - zipy-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  zipy-postgres-data:
+  zipy-redis-data:

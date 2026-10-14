@@ -1,0 +1,12 @@
+
+Tighten `DEFAULT_RETENTION_DAYS` in the env file and per-workspace
+overrides from `/admin` to reduce the steady-state footprint.
+
+---
+
+## 9. "Client reports slow early requests after a restart"
+
+The worker warms up Playwright, the OCR chain and the LLM connection on
+first use. The first job after a restart is therefore slower than
+steady-state. If this is unacceptable, run a warm-up job through the
+scheduler shortly after restart:

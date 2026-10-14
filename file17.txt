@@ -1,0 +1,12 @@
+
+The model choice determines accuracy, memory, and CPU time. On CPU-only
+hosts, `small` or `base` are practical; `medium` and `large-v3` are
+usable only on a host with a GPU or with the patience for very long
+transcription jobs. The platform does not choose a model; it sends
+whatever the whisper.cpp server has loaded.
+
+### 6.3 OCR
+
+The default `OCR_ENGINE=auto` prefers EasyOCR and falls back to Tesseract.
+Install both in the worker's Python environment when the operator wants
+the fallback:

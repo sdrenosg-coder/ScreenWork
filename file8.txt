@@ -1,0 +1,6 @@
+
+The migration runner is idempotent. Re-running it after a version upgrade
+applies only new statements. Back up the database before every upgrade; the
+runner does not take a backup itself.
+
+### 3.5 Build

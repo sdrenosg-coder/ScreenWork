@@ -1,0 +1,11 @@
+
+### 11.2 Application-level signals
+
+The application writes one line per notable event to stdout/stderr with a
+stable prefix (`[web]`, `[worker]`, or the route or job name in brackets).
+The operator's log aggregation (journald to a collector, Loki, or similar)
+groups on that prefix. There is no metrics endpoint in the repository; a
+prometheus scrape target is not present, and the operator adds one by
+wrapping the JSON logs.
+
+### 11.3 Database health

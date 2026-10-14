@@ -1,0 +1,3 @@
+
+For hosted providers, confirm the worker host can reach the provider's
+domain:

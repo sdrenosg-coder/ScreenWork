@@ -1,0 +1,7 @@
+
+`getConfig()` validates these on startup. When `SESSION_SECRET` is missing
+or shorter than 32 characters, the web app refuses to boot and writes the
+reason to stderr. The full list of optional variables and their defaults
+is in `apps/web/src/lib/config.ts`.
+
+### 3.4 Create the database schema

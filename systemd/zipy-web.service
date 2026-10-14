@@ -1,0 +1,55 @@
+# Zipy AI — web application unit.
+#
+# Adapts to a bare-metal or private-VM host. Adjust User/Group, WorkingDirectory
+# and ExecStart to match the operator's layout. EnvironmentFile carries the
+# filled env template; values from the file are overlaid on the unit's
+# Hardening profile below.
+
+[Unit]
+Description=Zipy AI web application (Next.js)
+Documentation=file:/opt/zipy/docs/operations/on-prem.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+# The web app fails fast when SESSION_SECRET is missing; it will restart
+# until the operator fixes the environment file.
+
+[Service]
+Type=simple
+User=zipy
+Group=zipy
+WorkingDirectory=/opt/zipy/apps/web
+EnvironmentFile=/etc/zipy/zipy.env
+Environment=NODE_ENV=production
+# The application binds 0.0.0.0 and reads PORT from the environment file;
+# keep the PORT default here so a misconfigured file still gets a bind.
+Environment=PORT=3000
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+
+# Journald; ship from here to the operator's log stack.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zipy-web
+
+# Hardening. The web process does not need to write outside the object
+# store, which uses a separate path (see STORAGE_LOCAL_ROOT); when the
+# operator uses the s3 driver nothing is written at all.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/zipy
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+# Chromium and Playwright run on the worker host, never on the web host.
+
+[Install]
+WantedBy=multi-user.target

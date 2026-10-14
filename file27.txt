@@ -1,0 +1,95 @@
+
+A steadily rising pending count with no failed count means the workers
+cannot keep up (add workers, §9.2). A steadily rising failed count means a
+shared dependency is failing (LLM provider outage, Docling down, browser
+missing a library); read the failed jobs' payloads — they carry the error
+kind, not a stack trace with secrets.
+
+---
+
+## 12. Kubernetes deployment sketch
+
+The repository does not ship Kubernetes manifests. The operator writes
+them. The design that fits this application is:
+
+- One `Deployment` for the web app. `PORT` from a ConfigMap, secrets from
+  a `Secret`. `startupProbe` on `GET /api/v1/openapi.json` (a route that
+  does not depend on external systems), `readinessProbe` on the same.
+  `livenessProbe` on the same with a generous timeout.
+- One `Deployment` for the worker. No Service. No probes wired to HTTP.
+  Readiness is the process reaching its poll loop; the operator can
+  approximate it with a `startupProbe` that checks the process is up.
+- A `HorizontalPodAutoscaler` on the worker keyed on its CPU or on a
+  custom metric derived from queue depth. CPU is a rough proxy; queue
+  depth is the right signal when the operator has a metrics pipeline.
+- A `PodDisruptionBudget` on the worker (`minAvailable: 1`) so a rolling
+  node maintenance does not take every worker at once. The queue's lock
+  TTL ensures a killed worker's job is reclaimed, but a brief hiccup is
+  cheaper than zero capacity.
+- A `CronJob` for the retention sweep if the operator prefers to run it
+  on the cluster's scheduler rather than in-process.
+- Postgres as a managed service or an operator-managed cluster. pgvector
+  must be installed; a plain Postgres image without pgvector fails the
+  migration.
+- Object storage as an S3-compatible service (MinIO on-cluster or a
+  managed offering) unless the operator prefers `local` with a
+  ReadWriteMany volume — which is legal but fragile, and the operator
+  should prefer S3.
+- The Docling and whisper.cpp services as their own `Deployment`s with
+  ClusterIP Services. Neither needs to be public.
+
+The container image the operator builds should extend
+`node:20-bookworm-slim` or equivalent, install Playwright's `--with-deps`
+libraries, copy the lockfile and run `npm ci`, and set the entrypoint to
+the same `npm start` the systemd units use. Do not use `npm install` in
+the image; use `npm ci`.
+
+---
+
+## 13. Troubleshooting matrix
+
+| Symptom | Likely cause | Check |
+|---------|--------------|-------|
+| Web app exits immediately with "SESSION_SECRET is not set" | Missing or short `SESSION_SECRET` | `grep SESSION_SECRET /opt/zipy/.env`; length must be ≥ 32 characters. |
+| Web app exits immediately with "CORS_ALLOWED_ORIGINS must not contain '*'" | Wildcard CORS in production | Set explicit origins. |
+| Web app exits with "STORAGE_DRIVER=s3 is set but ... incomplete" | S3 bucket or credentials missing | Fill `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_REGION` for AWS. |
+| Ingestion of a URL fails with "browser_unavailable" | Playwright browser missing an OS library | Run `sudo -u zipy npx playwright install-deps chromium`; read the printed missing library name. |
+| Ingestion of an image or PDF fails with 503 naming an OCR engine | Neither EasyOCR nor Tesseract is installed | Install the engine; see §6.3. |
+| PDF ingestion fails with a Docling error | `DOCLING_SERVICE_URL` unset or the service down | `curl "$DOCLING_SERVICE_URL/health"` (or the service's health path); check the container logs. |
+| Audio or video ingestion fails with 503 naming STT | `STT_ENGINE=none` or the whisper.cpp server is down | `curl -X POST "$STT_SERVICE_URL/inference" -F file=@sample.wav`; check §6.2. |
+| Every generation request fails with 503 `llm_unconfigured` | No LLM provider is configured | Set `LLM_DEFAULT_PROVIDER` and one of the provider variables; see §1.5. |
+| The worker starts but never picks up jobs | The worker points at a different `DATABASE_URL` than the web app | Compare the two processes' `DATABASE_URL`; they must be identical. |
+| Jobs pile up with `failed` status and a rate-limit error | The selected LLM provider is rate-limiting | Configure `LLM_FALLBACK_CHAIN`; check the provider's dashboard. |
+| Screenshots are missing or a step's capture fails | `PLAYWRIGHT_MAX_CONTEXTS` too low relative to concurrent browser jobs | Raise it, or reduce `JOBS_CONCURRENCY`. |
+| Retention sweep deletes more than expected | Workspace retention override is shorter than the server default | Read `/api/admin/retention` for the workspace in question. |
+| Public guide pages return 404 in the browser but 200 from `curl` | The reverse proxy is not forwarding `/p/*` | Add a `location /p/ { }` block or confirm the catch-all forwards it. |
+| Calls from the app to the LLM or Docling time out | The outbound path is blocked by egress firewall or the service is on a different host than configured | `curl` from the app host to the service host. |
+| Audit log records the proxy's IP rather than the caller's | `X-Forwarded-For` is not forwarded | Add the header to the reverse-proxy configuration; see §4.2. |
+
+---
+
+## 14. What on-prem deliberately does not do
+
+- It does not bundle Docling, whisper.cpp, or an OCR stack in the
+  application image. Each is a separate service because their dependencies
+  (Python, ML runtimes, GPU drivers) are heavy and version-coupled. The
+  operator runs them beside the app.
+- It does not run live payment charges. The billing plan model and usage
+  metering are in-app; charging is out of scope until a payment gateway
+  key is supplied. See `apps/web/src/lib/config.ts` — `liveChargesEnabled`
+  is only reachable when `STRIPE_SECRET_KEY` is present.
+- It does not implement SSO/SAML silently. When IdP metadata is supplied,
+  the SAML path activates; when it is not, the SAML login button is
+  absent from the login page and the API refuses SAML requests with a
+  configuration error. The RBAC layer and the schema for it are always
+  present; the live IdP is customer-supplied.
+- It does not ship a metrics endpoint. Logs are structured JSON on
+  stdout/stderr; wiring them to a metrics system is the operator's job.
+  The rationale: a metrics endpoint with no operator-side scrape target
+  is dead weight, and every operator's aggregation pipeline is different.
+- It does not include Kubernetes manifests. The application is a
+  container-friendly Node process plus a Postgres dependency plus
+  optional sidecar services, and the operator's cluster conventions
+  (naming, namespaces, secrets manager, ingress) drive the manifests.
+  §12 gives the shape without committing to a specific helm chart or
+  kustomize layout.

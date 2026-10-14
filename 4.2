@@ -1,0 +1,15 @@
+
+### 4.2 Behind a reverse proxy
+
+Terminate TLS at a reverse proxy (nginx, Caddy, HAProxy, Traefik). Two
+requirements:
+
+1. Forward the `Host` header so the app can build absolute URLs. Set
+   `PUBLIC_BASE_URL` to the external https URL; the app prefers it over
+   a derived value.
+2. Forward `X-Forwarded-Proto` and `X-Forwarded-For`. The audited IP in the
+   audit log comes from `X-Forwarded-For` when the proxy sets it; when it
+   does not, the audit log records the proxy's address and the operator
+   loses the distinction between the proxy and the original caller.
+
+An nginx snippet:

@@ -1,0 +1,9 @@
+
+A 401 from the provider means the key is present but wrong. A network
+timeout means the egress rule is missing.
+
+---
+
+## 6. "Webhook deliveries are not arriving"
+
+Check the signing secret is set — unsigned deliveries are refused:

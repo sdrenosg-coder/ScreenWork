@@ -1,0 +1,26 @@
+{
+  "name": "@zipy/export",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Zipy AI export renderers: PDF, HTML, Markdown (phase 20 batch 0). DOCX, image-pack and embed renderers land in batch 1; layout templates and the export route in batch 2.",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./pdf": "./src/pdf.ts",
+    "./html": "./src/html.ts",
+    "./markdown": "./src/markdown.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.4"
+  },
+  "workspaces_dependencies_notes": "This package depends only on pdf-lib at runtime. DOCX export (batch 1) will add the docx writer, but the choice of library is deferred to that batch so no unused dependency is declared here. Image-pack export (batch 1) will use the platform's zip utility or the archiver package, again deferred."
+}

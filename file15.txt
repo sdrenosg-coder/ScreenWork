@@ -1,0 +1,11 @@
+
+The platform does not authenticate to Docling (the assumption is a
+loopback or otherwise trusted network). If the operator exposes Docling on
+a shared network, put it behind a reverse proxy that requires a token.
+The platform's HTTP client does not send an authorization header to
+Docling by default.
+
+### 6.2 whisper.cpp (speech-to-text)
+
+Audio and video ingestion use speech-to-text. The recommended on-prem
+default is whisper.cpp's server mode:

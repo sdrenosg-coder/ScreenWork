@@ -1,0 +1,8 @@
+
+`npm ci` uses the committed lockfile. Do not use `npm install` in
+production; the lockfile is the reproducibility contract.
+
+### 3.3 Configure the environment
+
+Create a `.env` file (or export the variables through the host's process
+manager) with at minimum:

@@ -1,0 +1,23 @@
+[Unit]
+Description=Zipy AI worker
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zipy
+Group=zipy
+WorkingDirectory=/opt/zipy
+EnvironmentFile=/etc/zipy/zipy.env
+Environment=NODE_ENV=production
+Environment=PLAYWRIGHT_BROWSERS_PATH=/var/lib/zipy/playwright
+ExecStart=/usr/bin/node --experimental-strip-types apps/worker/src/index.ts
+Restart=on-failure
+RestartSec=5
+# The worker does not listen on a TCP port. It reads jobs from Postgres.
+# Playwright needs /dev/shm larger than the default 64 MB.
+PrivateTmp=true
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

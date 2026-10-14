@@ -1,0 +1,11 @@
+
+At the receiver, confirm the delivery carries `X-Zipy-Signature` and
+`X-Zipy-Timestamp`. The receiver recomputes the HMAC over the raw body
+using the shared secret; the platform never sends the secret in a header.
+
+---
+
+## 7. "The migration runner fails partway through an upgrade"
+
+Do **not** re-run blindly. Inspect the current schema state against the
+runner's version table:

@@ -1,0 +1,11 @@
+
+`KillSignal=SIGTERM` and `TimeoutStopSec=60` give the worker time to finish
+the in-flight job (or, more commonly, to return it to the queue) before the
+process manager escalates to SIGKILL. The queue's lock TTL (`JOBS_LOCK_TTL_MS`)
+covers the case where the worker dies without releasing a lock: the lock
+expires and another worker picks the job up.
+
+### 5.2 Multiple workers
+
+The queue is backed by a Postgres `jobs` table with row-level locking. Run
+one worker per CPU core as a starting point:

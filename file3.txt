@@ -1,0 +1,39 @@
+Playwright browser binaries and OS dependencies on an on-prem host
+====================================================================
+
+The installer in `install-playwright-browsers.sh` is the only supported path
+for preparing a worker host. It installs the browser the worker is configured
+to launch; it does not install Firefox when `PLAYWRIGHT_BROWSER=chromium`, and
+it does not install Chromium when `PLAYWRIGHT_BROWSER=firefox`. Operators who
+plan to switch browser kind without a redeploy set `PLAYWRIGHT_INSTALL_ALL=1`.
+
+1. Run it once per worker host, after `npm ci`:
+
+       sudo ./install-playwright-browsers.sh
+
+   The script uses the Playwright pinned in the checkout (`npx --no-install`)
+   so the binary version matches the library version that will launch it. A
+   global Playwright of a different version will install binaries the worker
+   does not use.
+
+2. `--with-deps` installs the OS packages Playwright documents for the host
+   distribution: `libnss3`, `libatk1.0-0`, `libatk-bridge2.0-0`, `libgbm1`,
+   `libxkbcommon0`, `libpango-1.0-0`, `libcairo2`, and a font set. On a
+   distribution `--with-deps` does not cover (Alpine, some minimal images),
+   install those libraries from the vendor's package manager first and pass
+   `PLAYWRIGHT_SKIP_DEPS=1` so the script does not attempt its own.
+
+3. When a browser fails to launch, the worker prints the exact missing
+   library name and the launch command it used; the message is not swallowed.
+   Re-run the script as root without `PLAYWRIGHT_SKIP_DEPS=1` to let
+   `--with-deps` resolve the missing package, or install it explicitly.
+
+4. `PLAYWRIGHT_BROWSER` in the worker's environment must match the browser
+   installed here. `apps/web/src/lib/config.ts` reads it into
+   `config.browser.browserKind`; the worker uses that value for every launch.
+   A mismatch produces a clear launch error naming the missing binary, not a
+   silent fallback to a different browser.
+
+The installation is idempotent: re-running with the same `PLAYWRIGHT_BROWSER`
+downloads nothing new. Pin upgrades happen together with `npm ci`; the script
+is run again after an upgrade so the binary version tracks the library.

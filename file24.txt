@@ -1,0 +1,10 @@
+
+Adjust the operator's `pgvector` version — HNSW requires pgvector 0.5.0
+or later.
+
+---
+
+## 10. Upgrades and rollback
+
+The deployment is a git checkout plus a lockfile plus a Postgres schema.
+The safest upgrade path treats the schema as additive and rolls forward:

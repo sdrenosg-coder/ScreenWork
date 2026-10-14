@@ -1,0 +1,18 @@
+
+The web app is stateless apart from its session cookie and the object
+store. The worker is stateless apart from the queue it consumes. Multiple
+web replicas and multiple worker replicas are safe provided:
+
+- `SESSION_SECRET` is identical across web replicas (it is the HMAC key).
+- `ENCRYPTION_MASTER_KEY` is identical across web and worker replicas.
+- The queue coordination primitive is shared (Postgres, or Redis when
+  `REDIS_URL` is set).
+- The object store is shared (S3-compatible) — running the `local` driver
+  across more than one host is not supported, because the temp volumes are
+  not shared.
+
+---
+
+## 3. Install steps
+
+### 3.1 Node and browser prerequisites
