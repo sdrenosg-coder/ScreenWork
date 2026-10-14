@@ -1,0 +1,31 @@
+{
+  "name": "zipy-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zipy AI — multi-modal AI screenshot-tutorial SaaS (monorepo root)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node apps/web/server.js",
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:worker": "npm --workspace apps/worker run dev",
+    "build": "npm --workspace apps/web run build",
+    "build:worker": "npm --workspace apps/worker run build",
+    "build:all": "npm run build && npm run build:worker",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate": "node --experimental-strip-types packages/db/src/migrate.ts",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f"
+  },
+  "workspaces_notes": "Each workspace declares its own dependencies; install from the repository root.",
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
