@@ -39,8 +39,8 @@
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 
-import { computeStableRef, slugifyName } from "./stableRefs.ts";
-import type { OcrResult } from "./ocr.ts";
+import { computeStableRef, slugifyName } from "./stableRefs";
+import type { OcrResult } from "./ocr";
 
 /* -------------------------------------------------------------------------- */
 /* Errors                                                                      */

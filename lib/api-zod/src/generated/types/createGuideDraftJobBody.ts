@@ -11,8 +11,10 @@ export type CreateGuideDraftJobBody = {
   /** @minimum 1 */
   expectedVersion: number;
   sourceKind: CreateGuideDraftJobBodySourceKind;
+  /** @maxItems 4 */
+  sourceIds?: string[];
   /**
-     * @minLength 5
+     * @minLength 0
      * @maxLength 30000
      */
   source: string;

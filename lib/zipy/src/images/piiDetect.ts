@@ -107,7 +107,7 @@ export interface PiiDetection {
   readonly confidence: number;
   readonly strategy: PiiStrategy;
   /** Which engine produced this detection. */
-  readonly source: "ocr-text" | "vision" | "merged";
+  readonly source: "ocr-text" | "vision" | "merged" | "reviewer";
   /**
    * The literal text (or a truncated slice) that triggered this detection.
    * Redacted by the redactor at render time; kept here so the reviewer sees

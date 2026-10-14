@@ -815,7 +815,7 @@ export function rehydrateLedger(value: unknown): UsageLedger {
     version: "usage-ledger/1",
     workspaceId: typeof r["workspaceId"] === "string" ? r["workspaceId"] : "",
     period: {
-      version: "billing-period/1",
+      version: "billing-period/1" as const,
       cadence,
       label: typeof period["label"] === "string" ? period["label"] : "",
       start: typeof period["start"] === "string" ? period["start"] : "",

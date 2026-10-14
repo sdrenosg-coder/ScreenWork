@@ -30,7 +30,7 @@
  *    rather than an `undefined is not a function`.
  */
 
-import { getConfig } from "@/lib/config";
+import { getConfig } from "../web/config";
 
 import type { PlaywrightPage } from "./browser.ts";
 

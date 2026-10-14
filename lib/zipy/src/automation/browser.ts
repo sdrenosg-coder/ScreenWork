@@ -26,7 +26,7 @@
  *    exists for the pooled case.
  */
 
-import { getConfig } from "@/lib/config";
+import { getConfig } from "../web/config";
 
 /* -------------------------------------------------------------------------- */
 /* Errors                                                                      */

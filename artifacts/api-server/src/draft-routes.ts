@@ -19,11 +19,29 @@ export function registerDraftRoutes(app: Express) {
     const guideId = id(req);
     const current = await guide(store, guideId);
     const body = objectBody(req);
+    let sourceValue = body.source;
+    const sourceIds = body.sourceIds ?? [];
+    if (!Array.isArray(sourceIds) || sourceIds.length > 4 || sourceIds.some(value => typeof value !== "string" || !UUID.test(value))) throw new ApiFailure(400, "validation_error", "Choose at most four processed sources.");
+    if (sourceIds.length) {
+      const texts: string[] = [];
+      for (const sourceId of sourceIds) {
+        const sourceJob = await getJob(workspaceId, sourceId);
+        if (!sourceJob || sourceJob.payload.guideId !== guideId || !sourceJob.kind.startsWith("ingest:")) throw new ApiFailure(404, "not_found", "Source does not belong to this guide.");
+        if (sourceJob.status !== "succeeded") throw new ApiFailure(409, "source_not_ready", "Wait for every selected source to finish processing.");
+        const key = sourceJob.result?.storageKey;
+        if (typeof key !== "string") throw new ApiFailure(409, "source_not_ready", "Source text is unavailable.");
+        const processed = await read(store, key);
+        if (typeof processed?.text !== "string") throw new ApiFailure(409, "source_not_ready", "Source text is unavailable.");
+        texts.push(`SOURCE ${texts.length + 1}: ${String(sourceJob.payload.filename)}\n${processed.text}`);
+      }
+      if (body.sourceKind !== "text") throw new ApiFailure(400, "validation_error", "Combine processed files with text notes, not a URL field.");
+      sourceValue = [typeof body.source === "string" ? body.source : "", ...texts].join("\n\n");
+    }
     if (body.expectedVersion !== current.version) throw new ApiFailure(409, "version_conflict", "Reload this guide before generating a draft.");
     if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY || !process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) throw new ApiFailure(503, "ai_not_configured", "AI processing is not configured.");
-    if (!["text", "url"].includes(String(body.sourceKind)) || typeof body.source !== "string" || body.source.trim().length < 5 || body.source.length > 30000) throw new ApiFailure(400, "validation_error", "Provide a text or URL source of 5–30,000 characters.");
+    if (!["text", "url"].includes(String(body.sourceKind)) || typeof sourceValue !== "string" || sourceValue.trim().length < 5 || sourceValue.length > 30000) throw new ApiFailure(400, "validation_error", "Provide combined source material of 5–30,000 characters.");
     if (body.sourceKind === "url") {
-      try { validatePublicUrlSyntax(body.source); }
+      try { validatePublicUrlSyntax(sourceValue); }
       catch { throw new ApiFailure(400, "validation_error", "Use a public page URL of at most 2,048 characters without credentials or internal network addresses."); }
     }
     const options = { language: body.language ?? "English", tone: body.tone ?? "clear", brandVoice: body.brandVoice ?? "", terminology: body.terminology ?? "" };
@@ -31,7 +49,7 @@ export function registerDraftRoutes(app: Express) {
       const max = name === "language" ? 60 : name === "tone" ? 30 : 1000;
       if (typeof value !== "string" || value.length > max || (["language", "tone"].includes(name) && !value.trim())) throw new ApiFailure(400, "validation_error", `Invalid ${name} option.`);
     }
-    const payload = { guideId, expectedVersion: current.version, source: { kind: body.sourceKind, value: body.source }, options, goal: current.title };
+    const payload = { guideId, expectedVersion: current.version, source: { kind: body.sourceKind, value: sourceValue, notes: body.source, sourceIds }, options, goal: current.title };
     const key = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
     const job = await locked(workspaceId, guideId, async () => {
       const latest = await guide(store, guideId);

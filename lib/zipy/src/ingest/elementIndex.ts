@@ -28,7 +28,7 @@ import {
   isInteractiveRole,
   walkA11y,
   type A11yNode,
-} from "./a11y.ts";
+} from "./a11y";
 
 /* -------------------------------------------------------------------------- */
 /* Index element shape                                                         */

@@ -70,10 +70,17 @@ import {
 import { loadSession, type SessionRecord } from "@workspace/zipy/web/auth/session";
 import { getConfig } from "@workspace/zipy/web/config";
 import { forWorkspace } from "@workspace/zipy/storage/routeStore";
-import { type DetectionBox, type DetectorCategory, type PiiDetection, type RedactionPolicy, type VisionAdapterHandle } from "@workspace/zipy/images/piiDetect";
-import * as importedContract0 from "@workspace/zipy/images/piiDetect";
-import { type RedactionMode } from "@workspace/zipy/images/redact";
-import * as importedContract1 from "@workspace/zipy/images/redact";
+import { detectPii, type PiiCategory as DetectorCategory, type PiiDetection, type PiiStrategy as RedactionMode, type PiiTextRegion } from "@workspace/zipy/images/piiDetect";
+import { redactPii } from "@workspace/zipy/images/redact";
+import sharp from "sharp";
+
+type DetectionBox = PiiDetection["bbox"];
+interface RedactionPolicy {
+  mustRedact?: readonly DetectorCategory[];
+  allowlist?: readonly DetectorCategory[];
+  sensitivity?: number;
+  mode?: RedactionMode;
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -111,17 +118,17 @@ const VALID_MODES: readonly RedactionMode[] = ["blur", "pixelate", "solid"];
 const KNOWN_CATEGORIES: readonly DetectorCategory[] = [
   "email",
   "phone",
-  "name",
-  "address",
+  "person-name",
+  "postal-address",
   "credit-card",
   "ssn",
   "iban",
   "ip-address",
   "api-key",
-  "access-token",
-  "password",
+  "bearer-token",
+  "password-field",
   "date-of-birth",
-  "id-number",
+  "url-with-token",
   "custom",
 ];
 
@@ -606,7 +613,7 @@ function readStoredPolicy(metadata: ScreenshotMetadata): Partial<RedactionPolicy
 
 interface DetectionDto {
   readonly category: DetectorCategory;
-  readonly source: "pattern" | "vision" | "custom" | "reviewer";
+  readonly source: PiiDetection["source"];
   readonly confidence: number;
   readonly text: string | null;
   readonly box: DetectionBox;
@@ -663,8 +670,8 @@ function toDetectionDto(
     category: detection.category,
     source: detection.source,
     confidence: detection.confidence,
-    text: detection.text ?? null,
-    box: detection.box,
+    text: null,
+    box: detection.bbox,
     redacted,
   };
   if (!redacted) {
@@ -688,11 +695,16 @@ function customRegionToDetection(region: {
   readonly height: number;
 }): PiiDetection {
   return {
+    id: `reviewer:${region.x}:${region.y}:${region.width}:${region.height}`,
     category: "custom",
     source: "reviewer",
     confidence: 1,
-    text: null,
-    box: {
+    strategy: "solid",
+    ruleId: null,
+    matchedText: null,
+    patternId: null,
+    visionLabel: null,
+    bbox: {
       x: region.x,
       y: region.y,
       width: region.width,
@@ -943,16 +955,26 @@ export async function POST(
   // applied below using the same module so the two never disagree.
   let detections: readonly PiiDetection[];
   try {
-    const result = await detectPiiRegionsFromBytes(imageBytes, {
-      policy: effectivePolicy,
-      customPatterns: validatedBody.customPatterns,
-      useVision: effectiveUseVision,
-      // A vision adapter handle is only acquired when useVision is true. The
-      // module lazily requires the provider config; when a VLM is unconfigured
-      // it throws a typed error which we translate into a 503 below.
-      vision: effectiveUseVision ? makeVisionHandle(config) : null,
+    if (effectiveUseVision) throw new Error("Vision bounding-box processing is not wired; vision provider not configured for this route.");
+    const dimensions = await sharp(imageBytes).metadata();
+    if (!dimensions.width || !dimensions.height) throw new Error("Screenshot dimensions could not be decoded.");
+    const regions = asRecord(metadata).ocrRegions;
+    const ocrRegions: PiiTextRegion[] = [];
+    if (Array.isArray(regions)) for (const region of regions) {
+      const row = asRecord(region), box = asRecord(row.bbox);
+      if (typeof row.text === "string" && [box.x, box.y, box.width, box.height].every(value => typeof value === "number" && Number.isFinite(value))) {
+        ocrRegions.push({ text: row.text, bbox: { x: Number(box.x), y: Number(box.y), width: Number(box.width), height: Number(box.height) } });
+      }
+    }
+    if (!ocrRegions.length && !validatedBody.customRegions.length) throw new Error("No OCR regions or reviewer-selected regions are available for detection.");
+    const result = await detectPii({
+      imageBytes, viewport: { width: dimensions.width, height: dimensions.height },
+      deviceScaleFactor: 1, ocrRegions,
+    }, {
+      keepMatchedText: false,
+      customPatterns: validatedBody.customPatterns.map(pattern => ({ id: pattern.label, description: pattern.label, pattern: new RegExp(pattern.source, pattern.flags) })),
     });
-    detections = result.detections;
+    detections = result.detections.filter(detection => detection.confidence >= 1 - (effectivePolicy.sensitivity ?? 1));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (isMissingVisionError(message)) {
@@ -998,14 +1020,12 @@ export async function POST(
   const mode: RedactionMode = validatedBody.mode ?? effectivePolicy.mode ?? "blur";
   let redactedBytes: Buffer;
   try {
-    const redacted = await redactImage(imageBytes, toRedact, {
-      mode,
-      // Preserve the original alpha channel and DPI; the module handles the
-      // renderer-specific details. The `contentType` is inferred from the
-      // input format so a PNG stays a PNG (lossless requirement) and a WebP
-      // stays WebP.
-      preserveFormat: true,
-    });
+    const dimensions = await sharp(imageBytes).metadata();
+    if (!dimensions.width || !dimensions.height) throw new Error("Screenshot dimensions could not be decoded.");
+    const redacted = await redactPii({
+      imageBytes, detections: toRedact.map(detection => ({ ...detection, strategy: detection.source === "reviewer" ? "solid" : mode })),
+      width: dimensions.width, height: dimensions.height,
+    }, { outputFormat: inferRedactedContentType(fileKey, metadata) === "image/webp" ? "webp" : inferRedactedContentType(fileKey, metadata) === "image/jpeg" ? "jpeg" : "png" });
     redactedBytes = redacted.bytes;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -1142,15 +1162,6 @@ export async function POST(
  * `isMissingVisionError` below) when no provider is reachable; this route
  * turns that into an explicit 503 rather than a silent pattern-only fallback.
  */
-function makeVisionHandle(config: ReturnType<typeof getConfig>): VisionAdapterHandle {
-  return {
-    // The images module composes this from config itself when given the
-    // adapter factory; we pass the config-derived discriminator so the module
-    // does not have to re-read config.
-    provider: config.llm.defaultProvider,
-    logPrefix: "zipy:images:piiDetect",
-  };
-}
 
 function isMissingVisionError(message: string): boolean {
   return /vision.?unconfigured|no.?vlm|provider.?unconfigured|vision provider not configured/i.test(
@@ -1253,6 +1264,3 @@ export async function DELETE(): Promise<HttpResponse> {
   );
 }
 
-import { requireImportedFunction } from "@/lib/import-contract";
-const detectPiiRegionsFromBytes = requireImportedFunction(importedContract0, "detectPiiRegionsFromBytes", "@workspace/zipy/images/piiDetect");
-const redactImage = requireImportedFunction(importedContract1, "redactImage", "@workspace/zipy/images/redact");

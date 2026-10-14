@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./DraftProcessing.css";
+import MediaSources from "./MediaSources";
 
 interface Draft {
   title: string; introduction: string;
@@ -11,6 +12,8 @@ interface Draft {
 interface Job { jobId: string; status: string; error: string | null; draft: Draft | null; expectedVersion?: number }
 
 export default function DraftProcessing({ guideId, version, dirty }: { guideId: string; version: number; dirty: boolean }) {
+  const [sourceIds, setSourceIds] = useState<string[]>([]);
+  useEffect(() => { setSourceIds([]); }, [guideId]);
   const [sourceKind, setSourceKind] = useState("text");
   const [source, setSource] = useState("");
   const [language, setLanguage] = useState("English");
@@ -59,7 +62,11 @@ export default function DraftProcessing({ guideId, version, dirty }: { guideId: 
           if (!response.ok) throw new Error(data.message ?? data.error?.message ?? "Job status could not load.");
           if (!abort.signal.aborted) {
             setJob(data);
-            if (data.source?.value) { setSource(data.source.value); setSourceKind(data.source.kind); }
+            if (data.source?.value) {
+              setSource(typeof data.source.notes === "string" ? data.source.notes : data.source.value);
+              setSourceKind(data.source.kind);
+              setSourceIds(Array.isArray(data.source.sourceIds) ? data.source.sourceIds : []);
+            }
             if (data.options?.language) setLanguage(data.options.language);
             if (data.options?.tone) setTone(data.options.tone);
             if (typeof data.options?.brandVoice === "string") setVoice(data.options.brandVoice);
@@ -78,7 +85,7 @@ export default function DraftProcessing({ guideId, version, dirty }: { guideId: 
   async function generate() {
     setBusy(true); setError("");
     try {
-      const queued = await request(`/api/guides/${guideId}/draft-jobs`, { expectedVersion: version, sourceKind, source, language, tone, brandVoice: voice });
+      const queued = await request(`/api/guides/${guideId}/draft-jobs`, { expectedVersion: version, sourceKind, source, sourceIds: sourceKind === "text" ? sourceIds : [], language, tone, brandVoice: voice });
       setJob({ ...queued, status: "pending", error: null, draft: null });
     } catch (error) { setError(error instanceof Error ? error.message : "Could not start drafting."); }
     finally { setBusy(false); }
@@ -115,7 +122,8 @@ export default function DraftProcessing({ guideId, version, dirty }: { guideId: 
       <div className="z-field" style={{ flex: "1 1 150px" }}><label htmlFor="draft-tone">Tone</label><select id="draft-tone" value={tone} disabled={busy || Boolean(running)} onChange={event => setTone(event.target.value)}><option value="clear">Clear and practical</option><option value="friendly">Friendly</option><option value="formal">Formal</option></select></div>
     </div>
     <div className="z-field"><label htmlFor="draft-brand-voice">Brand voice instructions (optional)</label><input id="draft-brand-voice" value={voice} maxLength={1000} disabled={busy || Boolean(running)} onChange={event => setVoice(event.target.value)} /></div>
-    <button className="z-btn z-btn-primary" data-testid="button-generate-draft" disabled={dirty || busy || Boolean(running) || source.trim().length < 5 || !language.trim()} onClick={() => void generate()}>{running ? job.status === "active" ? "Processing source…" : "Queued for processing…" : busy ? "Starting…" : "Generate AI draft"}</button>
+    <MediaSources guideId={guideId} selected={sourceIds} onSelected={setSourceIds} disabled={busy || Boolean(running) || sourceKind !== "text"} />
+    <button className="z-btn z-btn-primary" data-testid="button-generate-draft" disabled={dirty || busy || Boolean(running) || (source.trim().length < 5 && (sourceKind !== "text" || !sourceIds.length)) || !language.trim()} onClick={() => void generate()}>{running ? job.status === "active" ? "Processing source…" : "Queued for processing…" : busy ? "Starting…" : "Generate AI draft"}</button>
     {job?.status === "status_error" && <button className="z-btn" onClick={() => { setError(""); setJob({ ...job, status: "pending" }); }}>Reconnect to job status</button>}
     {job?.status === "failed" && <p role="alert" className="z-err">{job.error ?? "Processing failed."} No draft was applied. You can retry generation.</p>}
     {error && <p className="z-err" role="alert">{error}</p>}

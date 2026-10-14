@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import path from "node:path";
 import { forWorkspace } from "@workspace/zipy/storage/routeStore";
+import { getJob } from "@workspace/zipy/jobs/queue";
+import { deleteMedia } from "@workspace/zipy/storage/mediaStore";
 import { registerObjectStoreDriver } from "@workspace/zipy/storage/objectStore";
 import { LocalObjectStoreDriver } from "@workspace/zipy/storage/localDriver";
 import { getConfig } from "@workspace/zipy/web/config";
@@ -41,6 +43,32 @@ test("SaaS guide editing, versions, publication privacy and list pagination", as
     const saved = await request.put(`/api/guides/${id}`, { data: { expectedVersion: 1, steps } });
     expect(saved.status(), await saved.text()).toBe(200);
     expect((await saved.json()).guide.version).toBe(2);
+    for (const format of ["pdf", "docx", "html", "markdown", "imagepack"]) {
+      const exported = await request.get(`/api/guides/${id}/export?format=${format}`);
+      expect(exported.status(), await exported.text()).toBe(200);
+      const bytes = await exported.body();
+      expect(bytes.length).toBeGreaterThan(30);
+      if (format === "pdf") {
+        expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
+        const uploaded = await request.post(`/api/guides/${id}/sources`, { multipart: { file: { name: "visible-steps.pdf", mimeType: "application/pdf", buffer: bytes } } });
+        expect(uploaded.status(), await uploaded.text()).toBe(202);
+        const { jobId } = await uploaded.json();
+        fixture.keys.push(`sources/processed/${jobId}.json`);
+        try {
+          await expect.poll(async () => {
+            const sources = (await (await request.get(`/api/guides/${id}/sources`)).json()).sources;
+            return sources.find((source: any) => source.jobId === jobId)?.status;
+          }, { timeout: 25000 }).toBe("succeeded");
+          const sources = (await (await request.get(`/api/guides/${id}/sources`)).json()).sources;
+          expect(sources.find((source: any) => source.jobId === jobId).text).toContain("Visible step");
+        } finally {
+          const job = await getJob(workspaceId, jobId);
+          if (typeof job?.payload.sourceId === "string") await deleteMedia(workspaceId, job.payload.sourceId);
+        }
+      }
+      else if (format === "docx" || format === "imagepack") expect(bytes.subarray(0, 2).toString()).toBe("PK");
+      else expect(bytes.toString()).toContain("Visible step");
+    }
     const stale = await request.put(`/api/guides/${id}`, { data: { expectedVersion: 1, steps } });
     expect(stale.status()).toBe(409);
     const history = await request.get(`/api/guides/${id}/versions`);

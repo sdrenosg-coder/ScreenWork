@@ -2,3 +2,4 @@
 - [Generated API compatibility](codegen-compatibility.md) — avoid duplicate inferred/model input exports; browser clients may need DOM iterable typings.
 - [SaaS product scope](product-scope.md) — Zipy must function as SaaS, not merely display imported screens; make feature readiness explicit.
 - [Branding semantics](branding-semantics.md) — saving branding applies the theme; white-labelling separately removes Zipy platform branding.
+- [Upload boundaries](upload-boundaries.md) — a tiny file's multipart “size” error can mean an upstream body parser already consumed the request stream.

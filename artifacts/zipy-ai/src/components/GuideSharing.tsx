@@ -53,6 +53,9 @@ export default function GuideSharing({ guideId, currentVersion, dirty }: { guide
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <a className="z-btn" href={`/api/guides/${encodeURIComponent(guideId)}/download?format=markdown`}>Export Markdown</a>
           <a className="z-btn" href={`/api/guides/${encodeURIComponent(guideId)}/download?format=json`}>Export JSON</a>
+          <a className="z-btn" href={`/api/guides/${encodeURIComponent(guideId)}/export?format=pdf`}>Export PDF</a>
+          <a className="z-btn" href={`/api/guides/${encodeURIComponent(guideId)}/export?format=docx`}>Export Word</a>
+          <a className="z-btn" href={`/api/guides/${encodeURIComponent(guideId)}/export?format=html`}>Export HTML</a>
           <button className="z-btn z-btn-primary" data-testid="button-publish-guide" disabled={busy || dirty} onClick={() => void changePublication(true)}>
             {busy ? "Updating…" : slug ? "Publish saved changes" : "Publish guide"}
           </button>

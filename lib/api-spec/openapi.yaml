@@ -27,7 +27,11 @@ paths:
               properties:
                 expectedVersion: { type: integer, minimum: 1 }
                 sourceKind: { type: string, enum: [text, url] }
-                source: { type: string, minLength: 5, maxLength: 30000 }
+                sourceIds:
+                  type: array
+                  maxItems: 4
+                  items: { type: string, format: uuid }
+                source: { type: string, minLength: 0, maxLength: 30000 }
                 language: { type: string, maxLength: 60 }
                 tone: { type: string, maxLength: 30 }
                 brandVoice: { type: string, maxLength: 1000 }
@@ -227,6 +231,52 @@ paths:
       summary: Revoke public access while retaining all private revisions
       responses:
         "200": { description: Public access revoked }
+  /guides/{id}/sources:
+    parameters:
+      - $ref: "#/components/parameters/GuideId"
+    get:
+      operationId: listGuideSources
+      responses:
+        "200":
+          description: Private processing states and extracted text.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSourceCollection" }
+    post:
+      operationId: uploadGuideSource
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/GuideSourceUpload" }
+      responses:
+        "202":
+          description: Stored in private App Storage and queued.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSourceQueued" }
+  /guides/{id}/export:
+    get:
+      operationId: exportGuideDocument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: format
+          in: query
+          required: true
+          schema: { type: string, enum: [pdf, docx, html, markdown, imagepack] }
+      responses:
+        "200":
+          description: Last saved guide rendered as a downloadable document.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401":
+          description: Sign-in required.
+        "404":
+          description: Guide not found in the active workspace.
   /guides/{id}/download:
     parameters:
       - $ref: "#/components/parameters/GuideId"
@@ -497,6 +547,35 @@ components:
       required: true
       schema: { type: string, format: uuid }
   schemas:
+    GuideSourceUpload:
+      type: object
+      required: [file]
+      properties:
+        file: { type: string, format: binary }
+    GuideSourceQueued:
+      type: object
+      required: [jobId, status, filename]
+      properties:
+        jobId: { type: string, format: uuid }
+        status: { type: string }
+        filename: { type: string }
+    GuideSourceCollection:
+      type: object
+      required: [sources]
+      properties:
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/GuideSourceItem" }
+    GuideSourceItem:
+      type: object
+      required: [jobId, filename, kind, status, error, text]
+      properties:
+        jobId: { type: string, format: uuid }
+        filename: { type: string }
+        kind: { type: string }
+        status: { type: string }
+        error: { type: [string, "null"] }
+        text: { type: [string, "null"] }
     GuideResponse:
       type: object
       required: [guide, message]

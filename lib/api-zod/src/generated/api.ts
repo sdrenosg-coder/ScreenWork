@@ -16,7 +16,9 @@ export const CreateGuideDraftJobParams = zod.object({
 })
 
 
-export const createGuideDraftJobBodySourceMin = 5;
+export const createGuideDraftJobBodySourceIdsMax = 4;
+
+export const createGuideDraftJobBodySourceMin = 0;
 export const createGuideDraftJobBodySourceMax = 30000;
 
 export const createGuideDraftJobBodyLanguageMax = 60;
@@ -32,6 +34,7 @@ export const createGuideDraftJobBodyTerminologyMax = 1000;
 export const CreateGuideDraftJobBody = zod.object({
   "expectedVersion": zod.number().int().min(1),
   "sourceKind": zod.enum(['text', 'url']),
+  "sourceIds": zod.array(zod.string().uuid()).max(createGuideDraftJobBodySourceIdsMax).optional(),
   "source": zod.string().min(createGuideDraftJobBodySourceMin).max(createGuideDraftJobBodySourceMax),
   "language": zod.string().max(createGuideDraftJobBodyLanguageMax).optional(),
   "tone": zod.string().max(createGuideDraftJobBodyToneMax).optional(),
@@ -280,6 +283,48 @@ export const UnpublishGuideParams = zod.object({
 })
 
 export const UnpublishGuideResponse = zod.unknown()
+
+
+export const ListGuideSourcesParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ListGuideSourcesResponse = zod.object({
+  "sources": zod.array(zod.object({
+  "jobId": zod.string().uuid(),
+  "filename": zod.string(),
+  "kind": zod.string(),
+  "status": zod.string(),
+  "error": zod.string().nullable(),
+  "text": zod.string().nullable()
+}))
+})
+
+
+export const UploadGuideSourceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const UploadGuideSourceBody = zod.object({
+  "file": zod.instanceof(Blob)
+})
+
+export const UploadGuideSourceResponse = zod.object({
+  "jobId": zod.string().uuid(),
+  "status": zod.string(),
+  "filename": zod.string()
+})
+
+
+export const ExportGuideDocumentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ExportGuideDocumentQueryParams = zod.object({
+  "format": zod.enum(['pdf', 'docx', 'html', 'markdown', 'imagepack'])
+})
+
+export const ExportGuideDocumentResponse = zod.unknown()
 
 
 /**

@@ -27,6 +27,7 @@ import type {
   DownloadGuideParams,
   DownloadPublishedGuide200Two,
   DownloadPublishedGuideParams,
+  ExportGuideDocumentParams,
   GetBrandingTheme200,
   GetGuideDraftJob200,
   GetGuideVersions200,
@@ -39,6 +40,9 @@ import type {
   GetWorkspaceReportParams,
   GuideDocument,
   GuideResponse,
+  GuideSourceCollection,
+  GuideSourceQueued,
+  GuideSourceUpload,
   HealthStatus,
   PublishGuide200,
   PublishGuideBody,
@@ -985,6 +989,231 @@ export const useUnpublishGuide = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getUnpublishGuideMutationOptions(options));
     }
+
+export const getListGuideSourcesUrl = (id: string,) => {
+
+
+
+
+  return `/api/guides/${id}/sources`
+}
+
+export const listGuideSources = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<GuideSourceCollection> => {
+
+  return customFetch<GuideSourceCollection>(getListGuideSourcesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGuideSourcesQueryKey = (id: string,) => {
+    return [
+    `/api/guides/${id}/sources`
+    ] as const;
+    }
+
+
+export const getListGuideSourcesQueryOptions = <TData = Awaited<ReturnType<typeof listGuideSources>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGuideSources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGuideSourcesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGuideSources>>> = ({ signal }) => listGuideSources(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGuideSources>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGuideSourcesQueryResult = NonNullable<Awaited<ReturnType<typeof listGuideSources>>>
+export type ListGuideSourcesQueryError = ErrorType<unknown>
+
+
+
+export function useListGuideSources<TData = Awaited<ReturnType<typeof listGuideSources>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGuideSources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGuideSourcesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUploadGuideSourceUrl = (id: string,) => {
+
+
+
+
+  return `/api/guides/${id}/sources`
+}
+
+export const uploadGuideSource = async (id: string,
+    guideSourceUpload: GuideSourceUpload, options?: Parameters<typeof customFetch>[1]): Promise<GuideSourceQueued> => {
+    const formData = new FormData();
+formData.append(`file`, guideSourceUpload.file);
+
+  return customFetch<GuideSourceQueued>(getUploadGuideSourceUrl(id),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+
+export const getUploadGuideSourceMutationKey = () => ['uploadGuideSource'] as const;
+
+export const getUploadGuideSourceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadGuideSource>>, TError,UploadGuideSourceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadGuideSource>>, TError,UploadGuideSourceMutationVariables, TContext> => {
+
+const mutationKey = getUploadGuideSourceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadGuideSource>>, UploadGuideSourceMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  uploadGuideSource(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadGuideSourceMutationResult = NonNullable<Awaited<ReturnType<typeof uploadGuideSource>>>
+    export type UploadGuideSourceMutationBody = BodyType<GuideSourceUpload>
+    export type UploadGuideSourceMutationError = ErrorType<unknown>
+    export type UploadGuideSourceMutationVariables = {id: string;data: BodyType<GuideSourceUpload>}
+
+    export const useUploadGuideSource = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadGuideSource>>, TError,UploadGuideSourceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadGuideSource>>,
+        TError,
+        UploadGuideSourceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUploadGuideSourceMutationOptions(options));
+    }
+
+export const getExportGuideDocumentUrl = (id: string,
+    params: ExportGuideDocumentParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/guides/${id}/export?${stringifiedParams}` : `/api/guides/${id}/export`
+}
+
+export const exportGuideDocument = async (id: string,
+    params: ExportGuideDocumentParams, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getExportGuideDocumentUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportGuideDocumentQueryKey = (id: string,
+    params?: ExportGuideDocumentParams,) => {
+    return [
+    `/api/guides/${id}/export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportGuideDocumentQueryOptions = <TData = Awaited<ReturnType<typeof exportGuideDocument>>, TError = ErrorType<void>>(id: string,
+    params: ExportGuideDocumentParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportGuideDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportGuideDocumentQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportGuideDocument>>> = ({ signal }) => exportGuideDocument(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportGuideDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportGuideDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof exportGuideDocument>>>
+export type ExportGuideDocumentQueryError = ErrorType<void>
+
+
+
+export function useExportGuideDocument<TData = Awaited<ReturnType<typeof exportGuideDocument>>, TError = ErrorType<void>>(
+ id: string,
+    params: ExportGuideDocumentParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportGuideDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportGuideDocumentQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getDownloadGuideUrl = (id: string,
     params?: DownloadGuideParams,) => {

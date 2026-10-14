@@ -53,17 +53,13 @@ import {
   ANALYTICS_EVENT_KINDS,
   isAnalyticsEventKind,
   type AnalyticsEventKind,
-  type AnalyticsEventRecord,
+  type AnalyticsEvent as AnalyticsEventRecord,
 } from "@workspace/zipy/analytics/events";
-import { type GuideMetricsSummary } from "@workspace/zipy/analytics/guideMetrics";
+import { aggregateGuideMetrics, aggregateDropoff, aggregateSearchAnalytics, aggregateFeedback, aggregateTeamMetrics, type GuideMetricsSummary, type DropoffSummary, type SearchAnalyticsSummary, type FeedbackReportSummary as FeedbackSummary, type TeamMetricsSummary } from "@workspace/zipy/analytics/reportInputs";
 import * as importedContract0 from "@workspace/zipy/analytics/guideMetrics";
-import { type DropoffSummary } from "@workspace/zipy/analytics/dropoff";
 import * as importedContract1 from "@workspace/zipy/analytics/dropoff";
-import { type SearchAnalyticsSummary } from "@workspace/zipy/analytics/searchAnalytics";
 import * as importedContract2 from "@workspace/zipy/analytics/searchAnalytics";
-import { type FeedbackSummary } from "@workspace/zipy/analytics/feedback";
 import * as importedContract3 from "@workspace/zipy/analytics/feedback";
-import { type TeamMetricsSummary } from "@workspace/zipy/analytics/teamMetrics";
 import * as importedContract4 from "@workspace/zipy/analytics/teamMetrics";
 import {
   buildReportWindow,
@@ -670,19 +666,23 @@ export async function POST(req: Request): Promise<HttpResponse> {
   const lines: string[] = [];
   for (const e of validated.events) {
     const record: AnalyticsEventRecord = {
-      id: randomUUID(),
+      version: "analytics/1",
+      eventId: randomUUID(),
       workspaceId: pinnedWorkspaceId,
       guideId: e.guideId,
       kind: e.kind,
-      stepIndex: e.stepIndex,
-      query: e.query,
-      rating: e.rating,
-      comment: e.comment,
-      sessionId: e.sessionId,
+      slug: null,
+      userId: null,
+      payload: {
+        ...(typeof e.stepIndex === "number" ? { stepIndex: e.stepIndex } : {}),
+        ...(typeof e.rating === "number" ? { rating: e.rating } : {}),
+      },
+      sessionId: e.sessionId ?? randomUUID(),
       occurredAt: e.occurredAt,
       receivedAt: nowIso,
-      schemaVersion: 1,
-    } as AnalyticsEventRecord;
+      searchConsentStored: false,
+      notes: [],
+    };
     lines.push(JSON.stringify(record));
   }
   const payload = Buffer.from(`${lines.join("\n")}\n`, "utf8");
@@ -1068,8 +1068,3 @@ export async function DELETE(): Promise<HttpResponse> {
 }
 
 import { requireImportedFunction } from "@/lib/import-contract";
-const aggregateGuideMetrics = requireImportedFunction(importedContract0, "aggregateGuideMetrics", "@workspace/zipy/analytics/guideMetrics");
-const aggregateDropoff = requireImportedFunction(importedContract1, "aggregateDropoff", "@workspace/zipy/analytics/dropoff");
-const aggregateSearchAnalytics = requireImportedFunction(importedContract2, "aggregateSearchAnalytics", "@workspace/zipy/analytics/searchAnalytics");
-const aggregateFeedback = requireImportedFunction(importedContract3, "aggregateFeedback", "@workspace/zipy/analytics/feedback");
-const aggregateTeamMetrics = requireImportedFunction(importedContract4, "aggregateTeamMetrics", "@workspace/zipy/analytics/teamMetrics");

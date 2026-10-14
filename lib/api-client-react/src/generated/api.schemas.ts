@@ -5,6 +5,31 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface GuideSourceUpload {
+  file: Blob;
+}
+
+export interface GuideSourceQueued {
+  jobId: string;
+  status: string;
+  filename: string;
+}
+
+export interface GuideSourceItem {
+  jobId: string;
+  filename: string;
+  kind: string;
+  status: string;
+  /** @nullable */
+  error: string | null;
+  /** @nullable */
+  text: string | null;
+}
+
+export interface GuideSourceCollection {
+  sources: GuideSourceItem[];
+}
+
 export interface GuideStep {
   /** @maxLength 200 */
   id: string;
@@ -51,8 +76,10 @@ export type CreateGuideDraftJobBody = {
   /** @minimum 1 */
   expectedVersion: number;
   sourceKind: CreateGuideDraftJobBodySourceKind;
+  /** @maxItems 4 */
+  sourceIds?: string[];
   /**
-     * @minLength 5
+     * @minLength 0
      * @maxLength 30000
      */
   source: string;
@@ -140,6 +167,21 @@ export type PublishGuide200 = {
   guide: GuideDocument;
   message: string;
 };
+
+export type ExportGuideDocumentParams = {
+format: ExportGuideDocumentFormat;
+};
+
+export type ExportGuideDocumentFormat = typeof ExportGuideDocumentFormat[keyof typeof ExportGuideDocumentFormat];
+
+
+export const ExportGuideDocumentFormat = {
+  pdf: 'pdf',
+  docx: 'docx',
+  html: 'html',
+  markdown: 'markdown',
+  imagepack: 'imagepack',
+} as const;
 
 export type DownloadGuideParams = {
 format?: DownloadGuideFormat;

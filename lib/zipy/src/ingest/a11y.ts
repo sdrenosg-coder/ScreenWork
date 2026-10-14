@@ -456,7 +456,7 @@ export function hydrateA11yNode(value: unknown): A11yNode | null {
   const name = typeof r["name"] === "string" ? (r["name"] as string) : "";
   const description = typeof r["description"] === "string" ? (r["description"] as string) : null;
   const valueRaw = r["value"];
-  const value: string | number | boolean | null =
+  const nodeValue: string | number | boolean | null =
     valueRaw === null || valueRaw === undefined
       ? null
       : typeof valueRaw === "string" || typeof valueRaw === "number" || typeof valueRaw === "boolean"
@@ -481,7 +481,7 @@ export function hydrateA11yNode(value: unknown): A11yNode | null {
     role,
     name,
     description,
-    value,
+    value: nodeValue,
     states,
     focusable,
     interactive,

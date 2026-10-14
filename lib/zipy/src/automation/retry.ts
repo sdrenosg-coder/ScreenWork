@@ -30,7 +30,7 @@
  *    fired. `sleepWithAbort` is a first-class helper.
  */
 
-import { getConfig } from "@/lib/config";
+import { getConfig } from "../web/config";
 
 import { sleep } from "./waits.ts";
 

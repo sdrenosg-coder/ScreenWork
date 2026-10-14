@@ -351,7 +351,7 @@ async function readCounts(page: ResolvablePage): Promise<PageCounts | null> {
       return { buttons, inputs, links };
     });
     if (result === null || typeof result !== "object") return null;
-    const r = result as Record<string, unknown>;
+    const r = result;
     if (typeof r["buttons"] !== "number" || typeof r["inputs"] !== "number" || typeof r["links"] !== "number") {
       return null;
     }

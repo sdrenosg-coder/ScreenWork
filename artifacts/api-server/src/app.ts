@@ -9,6 +9,7 @@ import { registerWorkspaceReports } from "./workspace-reports";
 import { registerBrandingRoutes } from "./branding-routes";
 import { registerReaderRoutes } from "./reader-routes";
 import { registerDraftRoutes } from "./draft-routes";
+import { registerMediaRoutes } from "./media-routes";
 
 const app: Express = express();
 
@@ -35,6 +36,9 @@ app.use(cors());
 app.use("/api", router);
 // Imported handlers use native Request.json()/formData(). Preserve the raw body,
 // including multipart uploads, until the Fetch-to-Express boundary.
+// Native multipart parsing must run before the inherited Fetch bridge consumes
+// the request stream into a raw Buffer.
+registerMediaRoutes(app);
 app.use("/api", express.raw({ type: () => true, limit: "100mb" }));
 registerSaasRoutes(app);
 registerWorkspaceReports(app);

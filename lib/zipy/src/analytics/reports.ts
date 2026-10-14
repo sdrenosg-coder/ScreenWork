@@ -28,11 +28,10 @@
  * unusable just because no LLM is configured.
  */
 
-import type { GuideMetricsSummary } from "./guideMetrics";
-import type { DropoffSummary } from "./dropoff";
-import type { SearchAnalyticsSummary } from "./searchAnalytics";
-import type { FeedbackSummary } from "./feedback";
-import type { TeamMetricsSummary } from "./teamMetrics";
+import type {
+  GuideMetricsSummary, DropoffSummary, SearchAnalyticsSummary,
+  FeedbackReportSummary as FeedbackSummary, TeamMetricsSummary,
+} from "./reportInputs";
 
 /* -------------------------------------------------------------------------- */
 /* Report kinds                                                                */

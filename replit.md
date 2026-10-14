@@ -10,7 +10,7 @@ describe the whole product as production-ready.
 - Start `artifacts/zipy-ai: web` and `artifacts/api-server: API Server` using their managed Replit workflows.
 - Do not run a root `pnpm dev`: the services need workflow-provided ports and routing.
 - `pnpm --filter @workspace/scripts run test:zipy` runs the port's browser and API checks.
-- `pnpm --filter @workspace/scripts run worker:zipy` runs the processing worker from the API server's working directory so both use the same local storage root. It registers text ingestion, public-page ingestion, image text extraction, and content generation. Other imported handlers are not registered.
+- `pnpm --filter @workspace/scripts run worker:zipy` runs the processing worker from the API server's working directory so both use the same local guide storage root. Nine handlers register: text/URL/image, searchable PDF, modern Office (DOCX/PPTX/XLSX), audio/video speech extraction, and content generation. New binary source uploads use private App Storage, not the local guide store. Audio/video is bounded to three minutes and does not interpret video visuals. Scanned-PDF OCR is not implemented.
 
 ## Structure
 
@@ -41,7 +41,8 @@ describe the whole product as production-ready.
 - Four processing handlers are registered. Image extraction has no verified upload UI yet; PDF/Office/audio/video, multi-source fusion, accessibility-tree synthesis, capture, annotations, and advanced quality operations remain unfinished. Customer subscriptions stay disabled until a provider is connected. Development local storage is not a durable production storage configuration; the console worker also needs a production service arrangement before publishing.
 - The homepage lists all 26 workflow groups with explicitly illustrative demos and distinguishes available core features from unfinished advanced functionality.
 - The main shell, welcome, account entry and dashboard are responsive; other retained domain screens need further design work.
-- Shared-library and frontend strict checks pass. The API server still has inherited type/contract errors in unfinished analytics, billing, annotation and redaction modules; bundling and the implemented core's browser/API checks pass.
+- Shared-library, frontend and API-server strict checks pass. The original 56 API contract errors are repaired. The inherited worker/automation sources still contain strict contract errors; those are separate from the registered processing pipeline and must not be reported as resolved.
+- PDF/Word/HTML/Markdown/image-pack server exports use actual renderer contracts; protected downloads and a real PDF upload → worker extraction → private preview endpoint pass the regression suite. The editor supports source uploads, status/error polling and selection of up to four processed sources for generation. Office/audio/video handling is implemented but must be verified end-to-end before claiming feature completion. Full SaaS workflow completion, automation, collaboration, templates, webhooks and compliance remain agreed repair scope, not optional future features.
 
 ## Credentials and data
 

@@ -36,17 +36,17 @@
  *    engines fall back to `page.screenshot({ fullPage: true })`.
  */
 
-import { getConfig } from "@/lib/config";
+import { getConfig } from "../web/config";
 
-import type { BrowserSession, PlaywrightPage } from "./browser.ts";
+import type { BrowserSession, PlaywrightPage } from "./browser";
 import {
   captureScreenshotViaCdp,
   openCdpSession,
   overrideDeviceMetrics,
   CdpUnavailableError,
   type CdpSession,
-} from "./cdp.ts";
-import { sleep, type WaitablePage } from "./waits.ts";
+} from "./cdp";
+import { sleep, type WaitablePage } from "./waits";
 
 /* -------------------------------------------------------------------------- */
 /* Errors                                                                      */
@@ -411,7 +411,6 @@ export async function captureViewport(
         height: geometry.viewport.height,
         scale: 1,
       },
-      fullPage: false,
     });
     if (cdpResult !== null) {
       return succeeded(format, provenance, cdpResult.bytes);
@@ -684,7 +683,7 @@ export async function withBeforeAfter<T>(
   session: BrowserSession,
   action: string,
   run: () => Promise<T>,
-  options: BeforeAfterCaptureOptions = {},
+  options: BeforeAfterCaptureOptions = { action },
 ): Promise<{ readonly result: T; readonly pair: BeforeAfterResult }> {
   const viewportOptions: ViewportCaptureOptions = options.viewport ?? {};
   const settleMs = clampSettleMs(options.settleMs);

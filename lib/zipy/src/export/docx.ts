@@ -646,7 +646,8 @@ interface ParagraphOptions {
   readonly keepLines?: boolean;
 }
 
-function paragraph(runs: string, opts: ParagraphOptions = {}): string {
+function paragraph(runs: string | readonly string[], opts: ParagraphOptions = {}): string {
+  const runXml = typeof runs === "string" ? runs : runs.join("");
   const pPrParts: string[] = [];
   const spacingAttrs: string[] = [];
   if (opts.spacingBeforePt !== undefined) {
@@ -686,7 +687,7 @@ function paragraph(runs: string, opts: ParagraphOptions = {}): string {
     pPrParts.push(`<w:keepLines/>`);
   }
   const pPr = pPrParts.length > 0 ? `<w:pPr>${pPrParts.join("")}</w:pPr>` : "";
-  const body = opts.listBullet === true ? `<w:r><w:t xml:space="preserve">•  </w:t></w:r>${runs}` : runs;
+  const body = opts.listBullet === true ? `<w:r><w:t xml:space="preserve">•  </w:t></w:r>${runXml}` : runXml;
   return `<w:p>${pPr}${body}</w:p>`;
 }
 
