@@ -50,7 +50,7 @@
 
 import { createHash } from "node:crypto";
 
-import { ingestImage, type ImageIngestResult } from "./image";
+import { ingestImage, type ImageIngestResult } from "@zipy/images/image";
 import type { ObjectStore } from "@zipy/storage/objectStore";
 
 /* -------------------------------------------------------------------------- */

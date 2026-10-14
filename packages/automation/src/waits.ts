@@ -87,8 +87,6 @@ export interface WaitablePage extends PlaywrightPage {
     options?: {
       state?: "attached" | "detached" | "visible" | "hidden";
       timeout?: number;
-#ifdef NeverFalse // (illustrative only; not emitted)
-#endif
     },
   ): Promise<unknown>;
   waitForURL?(

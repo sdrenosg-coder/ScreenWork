@@ -153,11 +153,7 @@ export interface VariableApplication {
 }
 
 export interface ComposeVariablesInput {
-  readonly definitions: readonly Omit<VariableDefinition, "sourceRefs"> &
-    Partial<Pick<VariableDefinition, "sourceRefs">>
-    extends never
-    ? never
-    : readonly VariableDefinitionInput[];
+  readonly definitions: readonly VariableDefinitionInput[];
 }
 
 export interface VariableDefinitionInput {

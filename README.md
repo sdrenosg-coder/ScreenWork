@@ -54,7 +54,7 @@ Checks port/host binding and the start script. Push this project to Replit throu
 
 ## Notes from Zipy Codes
 - No clear entry point detected
-- Missing local imports: packages/ingest/src/image, packages/templates/src/library.js, packages/templates/src/inheritance.js, packages/review/src/riskClass.js, packages/review/src/checkpoints.js, packages/review/src/decisions.js, packages/review/src/handoff.js, packages/review/src/batchApprove.js, packages/webhooks/src/signature.js, apps/web/src/lib/config.js
+- Missing local imports: packages/templates/src/library.js, packages/templates/src/inheritance.js, packages/review/src/riskClass.js, packages/review/src/checkpoints.js, packages/review/src/decisions.js, packages/review/src/handoff.js, packages/review/src/batchApprove.js, packages/webhooks/src/signature.js, apps/web/src/lib/config.js
 - No Flask .run(...) or uvicorn.run(...) call found — cannot verify port/host binding for this destination
 - No Python entry point (e.g. main.py or app.py) detected
 

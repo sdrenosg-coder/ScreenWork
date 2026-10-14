@@ -301,8 +301,8 @@ export async function ingestAudio(
 
   const durationSeconds =
     stt.durationSeconds ??
-    diarization.segments.reduce((max, s) => (s.end > max ? s.end : max), 0) ||
-    null;
+    (diarization.segments.reduce((max, s) => (s.end > max ? s.end : max), 0) ||
+      null);
 
   return {
     sourcePath: inputPath,

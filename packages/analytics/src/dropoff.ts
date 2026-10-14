@@ -404,4 +404,3 @@ export const __internals = Object.freeze({
   parseBoundary,
 });
 
---- end packages/analytics/src/dropoff.ts ---

@@ -417,7 +417,7 @@ export class SamlAdapter {
     }
     if (assertion.issuer !== this.idp.idpEntityId) {
       throw new SamlError(
-        `SAML assertion `Issuer` "${assertion.issuer}" does not match the configured IdP entity id "${this.idp.idpEntityId}".`,
+        `SAML assertion Issuer "${assertion.issuer}" does not match the configured IdP entity id "${this.idp.idpEntityId}".`,
         "assertion-invalid",
         { received: assertion.issuer, expected: this.idp.idpEntityId },
       );

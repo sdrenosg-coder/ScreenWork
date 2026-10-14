@@ -430,4 +430,3 @@ export const __internals = Object.freeze({
   parseBoundary,
 });
 
---- end packages/analytics/src/guideMetrics.ts ---

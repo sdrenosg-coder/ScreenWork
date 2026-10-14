@@ -532,7 +532,6 @@ function prunePayload(
   // for anything kind-specific except the search strip, which the caller
   // performs. Nothing else to record here. Kept for a future extension.
   void kind;
-  void notes;
   return ordered as AnalyticsPayload;
 }
 
@@ -551,5 +550,3 @@ export const __internals = Object.freeze({
   prunePayload,
   isNonNegativeInt,
 });
-
---- end packages/analytics/src/events.ts ---
