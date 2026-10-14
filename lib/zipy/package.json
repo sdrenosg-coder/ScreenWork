@@ -1,0 +1,16 @@
+{
+  "name": "@workspace/zipy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1010.0",
+    "@aws-sdk/s3-request-presigner": "^3.1010.0",
+    "pg": "^8.16.3",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.34.5"
+  }
+}

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Zipy AI"
+description = "The imported Zipy AI screenshot tutorial platform, preserving its dashboard, guide editor, workflow review, analytics, administration and branding screens."
+version = "1.0.0"
+id = "artifacts/zipy-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21839
+
+[services.development]
+run = "pnpm --filter @workspace/zipy-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/zipy-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/zipy-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21839"
+BASE_PATH = "/"

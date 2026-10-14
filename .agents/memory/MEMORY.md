@@ -1,0 +1,1 @@
+- [Browser testing fallback](browser-testing.md) — use local Playwright and the platform Chromium when managed browser testing is unavailable.

@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { registerZipyRoutes } from "./zipy-routes";
 
 const app: Express = express();
 
@@ -26,9 +27,12 @@ app.use(
   }),
 );
 app.use(cors());
+app.use("/api", router);
+// Imported handlers use native Request.json()/formData(). Preserve the raw body,
+// including multipart uploads, until the Fetch-to-Express boundary.
+app.use("/api", express.raw({ type: () => true, limit: "100mb" }));
+registerZipyRoutes(app);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-app.use("/api", router);
 
 export default app;
