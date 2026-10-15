@@ -43,6 +43,7 @@
 
 import { HttpResponse } from "@/lib/http-response";
 import { randomUUID } from "node:crypto";
+import { mapConcurrent } from "@workspace/zipy/storage/mapConcurrent";
 
 import {
   PERMISSIONS,
@@ -467,23 +468,23 @@ export async function GET(req: Request): Promise<HttpResponse> {
 
   const loaded: LoadedGuide[] = [];
   const seen = new Set<string>();
-  for (const entry of entries) {
+  await mapConcurrent(entries, async entry => {
     const id = guideIdFromKey(entry.key);
-    if (id === null || seen.has(id)) continue;
+    if (id === null || seen.has(id)) return;
     seen.add(id);
     let record: Readonly<Record<string, unknown>>;
     try {
       const raw = await readJsonOrNull(store, entry.key);
-      if (raw === null || typeof raw !== "object" || Array.isArray(raw)) continue;
+      if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return;
       record = raw as Readonly<Record<string, unknown>>;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`[/api/v1/guides] skipping unreadable record ${entry.key}: ${message}\n`);
-      continue;
+      return;
     }
     const createdAt = readTimestamp(record, entry.lastModified);
     loaded.push({ id, createdAt, record });
-  }
+  });
 
   loaded.sort((a, b) => {
     if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;

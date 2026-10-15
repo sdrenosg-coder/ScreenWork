@@ -3,3 +3,4 @@
 - [SaaS product scope](product-scope.md) — Zipy must function as SaaS, not merely display imported screens; make feature readiness explicit.
 - [Branding semantics](branding-semantics.md) — saving branding applies the theme; white-labelling separately removes Zipy platform branding.
 - [Upload boundaries](upload-boundaries.md) — a tiny file's multipart “size” error can mean an upstream body parser already consumed the request stream.
+- [Guide storage continuity](storage-continuity.md) — copy, verify, retain originals, then switch; keep PostgreSQL and production/development boundaries intact.

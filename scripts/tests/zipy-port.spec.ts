@@ -8,8 +8,10 @@ import { deleteMedia } from "@workspace/zipy/storage/mediaStore";
 import { registerObjectStoreDriver } from "@workspace/zipy/storage/objectStore";
 import { LocalObjectStoreDriver } from "@workspace/zipy/storage/localDriver";
 import { getConfig } from "@workspace/zipy/web/config";
+import { mapConcurrent } from "@workspace/zipy/storage/mapConcurrent";
 
 test("SaaS guide editing, versions, publication privacy and list pagination", async ({ request, page }) => {
+  test.setTimeout(getConfig().storage.driver === "app-storage" ? 300000 : 30000);
   const emails = [`saas-${randomUUID()}@example.test`, `other-${randomUUID()}@example.test`];
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
   const cleanup: { store: Awaited<ReturnType<typeof forWorkspace>>; keys: string[] }[] = [];
@@ -120,9 +122,9 @@ test("SaaS guide editing, versions, publication privacy and list pagination", as
     await page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(page.getByRole("link", { name: "1. Visible step" })).toBeVisible();
     await page.getByRole("button", { name: "I completed this step" }).click();
-    await expect(page.getByRole("button", { name: "Step completed", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Step completed", exact: true })).toBeVisible({ timeout: 15000 });
     await page.getByRole("button", { name: "Rate guide 5 out of 5", exact: true }).click();
-    await expect(page.getByText("Your anonymous rating was saved. You can change it.")).toBeVisible();
+    await expect(page.getByText("Your anonymous rating was saved. You can change it.")).toBeVisible({ timeout: 15000 });
     const readerKeys = await store.list(`reader-events/${id}/`);
     fixture.keys.push(...readerKeys.entries.map(entry => entry.key));
     for (const kind of ["performance", "content-gap", "executive"]) {
@@ -156,7 +158,7 @@ test("SaaS guide editing, versions, publication privacy and list pagination", as
 
     // More than one native storage batch; application filtering cannot inspect
     // just the storage driver's first page.
-    for (let i = 0; i < 252; i++) {
+    await mapConcurrent(Array.from({ length: 252 }, (_, i) => i), async i => {
       const fixtureId = randomUUID();
       const key = `guides/${fixtureId}.json`;
       fixture.keys.push(key);
@@ -164,7 +166,7 @@ test("SaaS guide editing, versions, publication privacy and list pagination", as
         id: fixtureId, title: `Pagination fixture ${i}`, status: "draft",
         createdAt: new Date(1700000000000 + i).toISOString(),
       })));
-    }
+    });
     const first = await (await request.get("/api/v1/guides?limit=2")).json();
     expect(first.data).toHaveLength(2);
     expect(first.pagination.total).toBe(253);
@@ -190,9 +192,9 @@ test("SaaS guide editing, versions, publication privacy and list pagination", as
   } finally {
     for (const fixture of cleanup) {
       const activities = await fixture.store.list("activity/", { limit: 250 });
-      for (const entry of activities.entries) await fixture.store.delete(entry.key);
+      await mapConcurrent(activities.entries, entry => fixture.store.delete(entry.key));
     }
-    for (const fixture of cleanup) for (const key of fixture.keys) await fixture.store.delete(key);
+    for (const fixture of cleanup) await mapConcurrent(fixture.keys, key => fixture.store.delete(key));
     if (slug) await (await forWorkspace("__public__")).delete(`public-guides/${slug}.json`);
     await pool.query("DELETE FROM workspaces WHERE created_by IN (SELECT id FROM users WHERE email_normalized = ANY($1))", [emails]);
     await pool.query("DELETE FROM users WHERE email_normalized = ANY($1)", [emails]);
@@ -256,7 +258,7 @@ test("dashboard is readable on mobile", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Create your workspace", exact: true }).first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await expect(page.getByRole("link", { name: "I already have an account" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in", exact: true }).first()).toBeVisible();
 });
 
 test("original signup, session, login and text queue work", async ({ page, request }) => {

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "migrate:zipy-storage": "tsx ./src/migrate-zipy-storage.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:zipy": "playwright test --config playwright.config.ts",
     "test:zipy-media": "ZIPY_LIVE_AI_TESTS=1 playwright test --config playwright.config.ts zipy-media.spec.ts",

@@ -18,7 +18,7 @@
 
 export type NodeEnv = "development" | "test" | "production";
 export type LlmProvider = "openai" | "anthropic" | "gemini" | "ollama" | "vllm";
-export type StorageDriver = "local" | "s3";
+export type StorageDriver = "local" | "s3" | "app-storage";
 
 export interface ZipyConfig {
   readonly nodeEnv: NodeEnv;
@@ -248,7 +248,9 @@ function normalizeNodeEnv(raw: string | null): NodeEnv {
 }
 
 function normalizeStorageDriver(raw: string | null): StorageDriver {
-  return raw === "s3" ? "s3" : "local";
+  if (raw === null || raw === "local") return "local";
+  if (raw === "s3" || raw === "app-storage") return raw;
+  throw new Error("Unsupported STORAGE_DRIVER. Use local, s3, or app-storage.");
 }
 
 function normalizeLlmProvider(raw: string | null): LlmProvider | null {
@@ -699,6 +701,11 @@ export function validateStartupConfig(): {
   }
 
   if (config.isProduction) {
+    if (config.storage.driver === "local") {
+      errors.push(
+        "Production guide storage cannot use ephemeral local files. Verify a non-destructive migration, then set STORAGE_DRIVER=app-storage or s3.",
+      );
+    }
     if (config.server.publicBaseUrl.startsWith("http://")) {
       warnings.push(
         "PUBLIC_BASE_URL uses http:// in production; configure HTTPS in front of the app.",
@@ -712,6 +719,10 @@ export function validateStartupConfig(): {
         "STORAGE_DRIVER=s3 is set but S3_BUCKET / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY are incomplete.",
       );
     }
+  }
+
+  if (config.storage.driver === "app-storage" && !process.env.PRIVATE_OBJECT_DIR) {
+    errors.push("STORAGE_DRIVER=app-storage requires private App Storage to be configured.");
   }
 
   if (config.llm.defaultProvider === null) {

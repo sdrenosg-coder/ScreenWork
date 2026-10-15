@@ -12,7 +12,28 @@ function visitId(slug: string) {
   }
 }
 
+const pendingViews = new Map<string, Promise<{ completed: boolean }>>();
 async function postEvent(slug: string, visit: string, event: Record<string, unknown>, signal?: AbortSignal) {
+  if (event.kind === "view") {
+    const key = `${slug}:${visit}`;
+    const previous = pendingViews.get(key);
+    if (previous) return previous;
+    // All controls in one reader share a single accepted view, rather than
+    // queuing duplicate cloud requests and advisory locks for each click.
+    const pending = sendEvent(slug, visit, event).catch(error => {
+      pendingViews.delete(key); throw error;
+    });
+    if (pendingViews.size >= 200) pendingViews.delete(pendingViews.keys().next().value!);
+    pendingViews.set(key, pending);
+    return pending;
+  }
+  const result = await sendEvent(slug, visit, event, signal);
+  if (event.kind === "complete") {
+    pendingViews.set(`${slug}:${visit}`, Promise.resolve(result));
+  }
+  return result;
+}
+async function sendEvent(slug: string, visit: string, event: Record<string, unknown>, signal?: AbortSignal) {
   const response = await fetch(`/api/public-guides/${encodeURIComponent(slug)}/events`, {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ ...event, visitId: visit }), signal,
@@ -71,7 +92,7 @@ export function ReaderStepActions({ slug, index }: { slug: string; index: number
   }
   return <div style={{ marginTop: 12 }}>
     <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-      <button className="z-btn" disabled={busy || completed} onClick={() => void record("step-complete")}>{completed ? "Step completed" : "I completed this step"}</button>
+      <button className="z-btn" disabled={busy || completed} onClick={() => void record("step-complete")}>{completed ? "Step completed" : busy ? "Saving…" : "I completed this step"}</button>
       <label style={{ fontSize: 13 }}>Rate this step{" "}
         <select className="z-input" style={{ width: "auto" }} disabled={busy} value={rating} onChange={event => void record("feedback", event.target.value)}>
           <option value="" disabled>Choose a rating</option>

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { PERMISSIONS } from "@workspace/zipy/web/rbac/permissions";
 import { ApiFailure, endpoint, workspace, read, type Store, type RecordData } from "./saas-routes";
 import { readerInsights } from "./reader-analytics";
+import { mapConcurrent } from "@workspace/zipy/storage/mapConcurrent";
 
 export async function listRecords(store: Store, prefix: string, accept: (key: string) => boolean = key => key.endsWith(".json")) {
   const records: RecordData[] = [];
@@ -11,11 +12,11 @@ export async function listRecords(store: Store, prefix: string, accept: (key: st
   do {
     const page = await store.list(prefix, { limit: 250, cursor });
     segments++;
-    for (const entry of page.entries) {
-      if (!accept(entry.key)) continue;
+    await mapConcurrent(page.entries, async entry => {
+      if (!accept(entry.key)) return;
       const record = await read(store, entry.key);
       if (record) records.push(record);
-    }
+    });
     cursor = page.nextCursor;
     if (cursor) {
       if (cursors.has(cursor)) throw new Error("Storage repeated a listing cursor.");

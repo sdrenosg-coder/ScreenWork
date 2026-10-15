@@ -268,6 +268,7 @@ export async function getObjectStore(): Promise<ObjectStoreDriver> {
   if (!factories.has(driverName)) {
     if (driverName === "local") await import("./localDriver");
     else if (driverName === "s3") await import("./s3Driver");
+    else if (driverName === "app-storage") await import("./appStorageDriver");
   }
   const factory = factories.get(driverName);
   if (!factory) {

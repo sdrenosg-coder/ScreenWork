@@ -69,8 +69,7 @@ export function registerReaderRoutes(app: Express) {
     const completeKey = `reader-events/${guideId}/${body.visitId}-complete.json`;
     const eventKey = `reader-events/${guideId}/${body.visitId}-${suffix}.json`;
     const result = await locked(workspaceId, `reader/${guideId}/${body.visitId}`, async () => {
-      const view = await read(store, viewKey);
-      const complete = await read(store, completeKey);
+      const [view, complete] = await Promise.all([read(store, viewKey), read(store, completeKey)]);
       if (kind !== "view" && !view) throw new ApiFailure(409, "view_required", "Open the guide before recording progress.");
       const previous = kind === "view" ? view : kind === "complete" ? complete : await read(store, eventKey);
       const duplicate = previous !== null;
